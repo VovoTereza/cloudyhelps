@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Cloudy Impact local campaign administration access.">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Admin access | Cloudy Impact</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <a class="brand brand--center" href="/" aria-label="Cloudy Impact campaign home">
+      <span class="brand-mark" aria-hidden="true">C</span>
+      <span>Cloudy <strong>Impact</strong></span>
+    </a>
+
+    <section class="auth-card" aria-labelledby="auth-title">
+      <div class="auth-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M7 10V8a5 5 0 0 1 10 0v2"/><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M12 14v3"/></svg>
+      </div>
+      <p class="eyebrow">Campaign administration</p>
+      <h1 id="auth-title">Welcome back</h1>
+      <p class="auth-lead" id="auth-lead">Sign in to manage Jessica's campaign.</p>
+
+      <div class="local-notice" role="note">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4m0 4h.01"/><path d="M10.3 3.7 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 3.7a2 2 0 0 0-3.4 0Z"/></svg>
+        <span><strong>Local preview.</strong> Access and campaign data are stored only in this browser. Use a server-side login and database before publishing.</span>
+      </div>
+
+      <form id="auth-form" novalidate>
+        <div class="field">
+          <label for="admin-email">Email</label>
+          <input id="admin-email" name="email" type="email" autocomplete="username" placeholder="you@example.com" required>
+          <span class="field-error" id="email-error"></span>
+        </div>
+        <div class="field">
+          <label for="admin-password">Password</label>
+          <div class="password-field">
+            <input id="admin-password" name="password" type="password" autocomplete="current-password" minlength="10" placeholder="At least 10 characters" required>
+            <button class="icon-button" id="toggle-password" type="button" aria-label="Show password">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+            </button>
+          </div>
+          <span class="field-error" id="password-error"></span>
+        </div>
+        <div class="field" id="confirm-field" hidden>
+          <label for="admin-confirm">Confirm password</label>
+          <input id="admin-confirm" name="confirm" type="password" autocomplete="new-password" minlength="10" required>
+          <span class="field-error" id="confirm-error"></span>
+        </div>
+        <p class="form-message" id="auth-message" role="alert" hidden></p>
+        <button class="primary-button primary-button--full" id="auth-submit" type="submit">Sign in</button>
+      </form>
+    </section>
+
+    <a class="back-link" href="/">← Back to campaign</a>
+  </main>
+  <script src="/admin-auth.js"></script>
+</body>
+</html>
