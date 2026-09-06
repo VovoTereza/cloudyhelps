@@ -8,7 +8,7 @@ Static campaign, checkout and local administration interface prepared for Vercel
 npm run dev
 ```
 
-Open `http://127.0.0.1:8000/`. The admin login is available at `/admin-login.html`.
+Open `http://127.0.0.1:8000/`. The admin login is available at `/admin-login.html`, and the read-only dashboard demo is available at `/demo` after deployment (or `/admin.html?demo=1` locally).
 
 ## Production build
 

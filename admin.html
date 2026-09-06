@@ -37,13 +37,13 @@
 
   <main class="admin-main">
     <div class="admin-topbar">
-      <div><p class="eyebrow">Local admin</p><h1>Campaign dashboard</h1></div>
+      <div><p class="eyebrow" id="admin-mode-label">Local admin</p><h1>Campaign dashboard</h1></div>
       <button class="primary-button" type="submit" form="campaign-form"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save changes</button>
     </div>
 
-    <div class="prototype-banner" role="note">
+    <div class="prototype-banner" id="mode-banner" role="note">
       <span class="status-dot"></span>
-      <div><strong>Local management mode</strong><span>Changes are saved in this browser and update the local campaign preview. They are not synchronized to a server.</span></div>
+      <div><strong id="mode-banner-title">Local management mode</strong><span id="mode-banner-copy">Changes are saved in this browser and update the local campaign preview. They are not synchronized to a server.</span></div>
     </div>
 
     <form id="campaign-form">

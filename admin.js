@@ -1,6 +1,7 @@
 (() => {
   const sessionKey = "cloudyAdminSession";
-  if (sessionStorage.getItem(sessionKey) !== "active") {
+  const demoMode = new URLSearchParams(window.location.search).get("demo") === "1";
+  if (!demoMode && sessionStorage.getItem(sessionKey) !== "active") {
     window.location.replace("/admin-login.html");
     return;
   }
@@ -184,6 +185,7 @@
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (demoMode) return;
     if (!form.reportValidity()) return;
     const next = readData();
     if (!next.tiers.length || next.tiers.some((tier) => !tier.title || tier.amount <= 0)) {
@@ -251,6 +253,10 @@
   });
 
   document.querySelector("#logout-button").addEventListener("click", () => {
+    if (demoMode) {
+      window.location.replace("/admin-login.html");
+      return;
+    }
     sessionStorage.removeItem(sessionKey);
     window.location.replace("/admin-login.html");
   });
@@ -281,5 +287,26 @@
   }, { rootMargin: "-20% 0px -65%", threshold: [0, .25, .6] });
   sections.forEach((section) => observer.observe(section));
 
+  const enableDemoMode = () => {
+    document.body.classList.add("demo-mode");
+    document.querySelector("#admin-mode-label").textContent = "Dashboard demo";
+    document.querySelector("#mode-banner-title").textContent = "Read-only demonstration";
+    document.querySelector("#mode-banner-copy").textContent = "Explore the complete dashboard safely. Editing, uploads, saving, and content removal are unavailable in demo mode.";
+    saveState.textContent = "Demo data · read only";
+
+    form.querySelectorAll("input:not([type='file']), textarea").forEach((control) => {
+      control.readOnly = true;
+      control.setAttribute("aria-readonly", "true");
+    });
+    document.querySelector("#photo-upload").disabled = true;
+    document.querySelectorAll("#campaign-form button, button[form='campaign-form']").forEach((button) => {
+      button.disabled = true;
+    });
+    const uploadButton = document.querySelector(".upload-button");
+    uploadButton.setAttribute("aria-disabled", "true");
+    document.querySelector("#logout-button").textContent = "Exit demo";
+  };
+
   loadForm();
+  if (demoMode) enableDemoMode();
 })();
