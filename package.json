@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node server.mjs",
     "build": "node build.mjs",
-    "preview": "node server.mjs dist"
+    "preview": "node server.mjs public"
   },
   "engines": {
     "node": ">=20"

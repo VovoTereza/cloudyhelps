@@ -16,7 +16,7 @@ Open `http://127.0.0.1:8000/`. The admin login is available at `/admin-login.htm
 npm run build
 ```
 
-The deployable website is generated in `dist/`. The build embeds the campaign data runtime and restored interactions into `dist/index.html`, because the original archived page only allows inline scripts.
+The deployable website is generated in `public/`. The build embeds the campaign data runtime and restored interactions into `public/index.html`, because the original archived page only allows inline scripts.
 
 Preview that exact output locally with `npm run preview`.
 

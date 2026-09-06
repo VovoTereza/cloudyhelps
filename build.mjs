@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const output = path.join(root, "dist");
+const output = path.join(root, "public");
 const files = await readdir(root);
 const campaignFile = files.find((file) => file.toLowerCase().includes("help single mom") && file.toLowerCase().endsWith(".html"));
 
