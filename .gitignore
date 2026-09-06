@@ -1,5 +1,4 @@
 dist/
-public/
 .vercel/
 node_modules/
 *.log

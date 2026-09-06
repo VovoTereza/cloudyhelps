@@ -16,13 +16,13 @@ Open `http://127.0.0.1:8000/`. The admin login is available at `/admin-login.htm
 npm run build
 ```
 
-The deployable website is generated in `public/`. The build embeds the campaign data runtime and restored interactions into `public/index.html`, because the original archived page only allows inline scripts.
+The deployable website is generated in the versioned `public/` directory. The build embeds the campaign data runtime and restored interactions into `public/index.html`, because the original archived page only allows inline scripts. Run the build and commit the refreshed `public/` files after changing the source.
 
 Preview that exact output locally with `npm run preview`.
 
 ## Deploy to Vercel
 
-Import the repository into Vercel with the **Other** framework preset. `vercel.json` already configures `npm run build` and the `dist` output directory, so no dashboard overrides are required.
+Import the repository into Vercel with the **Other** framework preset. `vercel.json` disables the remote build and points directly to the committed `public/` directory, so no dashboard overrides are required.
 
 The friendly routes `/admin`, `/dashboard`, `/checkout`, and `/help-single-mom-fight-stage-4-cancer` are configured in `vercel.json`.
 

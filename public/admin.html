@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Manage the Cloudy Impact campaign.">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Campaign admin | Cloudy Impact</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body class="admin-page">
+  <header class="mobile-header">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">C</span><span>Cloudy <strong>Impact</strong></span></a>
+    <button class="icon-button" id="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </header>
+
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">C</span><span>Cloudy <strong>Impact</strong></span></a>
+    <div class="workspace-label"><span>Campaign workspace</span><strong>Jessica's campaign</strong></div>
+    <nav aria-label="Admin navigation">
+      <a href="#overview" class="nav-link is-active"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Overview</a>
+      <a href="#campaign" class="nav-link"><svg viewBox="0 0 24 24"><path d="M4 21v-7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v7"/><circle cx="12" cy="5" r="3"/></svg>Campaign</a>
+      <a href="#donations" class="nav-link"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>Donation levels</a>
+      <a href="#content" class="nav-link"><svg viewBox="0 0 24 24"><path d="M4 4h16v14H7l-3 3V4Z"/><path d="M8 9h8M8 13h5"/></svg>FAQs & messages</a>
+    </nav>
+    <div class="sidebar-footer">
+      <a class="secondary-button secondary-button--full" href="/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M14 3h7v7M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>View campaign</a>
+      <button class="text-button" id="logout-button" type="button">Sign out</button>
+    </div>
+  </aside>
+  <button class="sidebar-backdrop" id="sidebar-backdrop" aria-label="Close navigation" hidden></button>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div><p class="eyebrow">Local admin</p><h1>Campaign dashboard</h1></div>
+      <button class="primary-button" type="submit" form="campaign-form"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save changes</button>
+    </div>
+
+    <div class="prototype-banner" role="note">
+      <span class="status-dot"></span>
+      <div><strong>Local management mode</strong><span>Changes are saved in this browser and update the local campaign preview. They are not synchronized to a server.</span></div>
+    </div>
+
+    <form id="campaign-form">
+      <section class="admin-section" id="overview" aria-labelledby="overview-title">
+        <div class="section-heading"><div><p class="eyebrow">At a glance</p><h2 id="overview-title">Overview</h2></div><span class="save-state" id="save-state">All changes saved</span></div>
+        <div class="metric-grid">
+          <article class="metric-card"><span class="metric-icon metric-icon--blue"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg></span><span>Raised</span><strong id="metric-raised">$515</strong><small id="metric-progress">1% of goal</small></article>
+          <article class="metric-card"><span class="metric-icon metric-icon--amber"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M8.5 10h5.25a2.25 2.25 0 0 1 0 4.5H10"/></svg></span><span>Goal</span><strong id="metric-goal">$50,000</strong><small>Campaign target</small></article>
+          <article class="metric-card"><span class="metric-icon metric-icon--coral"><svg viewBox="0 0 24 24"><path d="M7 8h10M7 12h7M5 21l3-3h11a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2Z"/></svg></span><span>Messages</span><strong id="metric-messages">4</strong><small>Words of support</small></article>
+        </div>
+      </section>
+
+      <section class="admin-section" id="campaign" aria-labelledby="campaign-title">
+        <div class="section-heading"><div><p class="eyebrow">Public content</p><h2 id="campaign-title">Campaign details</h2></div></div>
+        <div class="panel">
+          <div class="form-grid">
+            <div class="field field--wide"><label for="campaign-name">Campaign title</label><input id="campaign-name" required maxlength="120"></div>
+            <div class="field field--wide"><label for="campaign-intro">Short introduction</label><textarea id="campaign-intro" rows="3" maxlength="320"></textarea><span class="field-help">Shown below the campaign title.</span></div>
+            <div class="field"><label for="campaign-raised">Amount raised (USD)</label><input id="campaign-raised" type="number" min="0" step="1" required></div>
+            <div class="field"><label for="campaign-goal">Goal (USD)</label><input id="campaign-goal" type="number" min="1" step="1" required></div>
+            <div class="field"><label for="campaign-status">Status label</label><input id="campaign-status" maxlength="32"></div>
+            <div class="field"><label for="organizer-name">Organizer name</label><input id="organizer-name" maxlength="80"></div>
+            <div class="field field--wide"><label for="organizer-role">Organizer role</label><input id="organizer-role" maxlength="80"></div>
+            <div class="field field--wide"><label for="campaign-story">Campaign story</label><textarea id="campaign-story" rows="10"></textarea><span class="field-help">Separate paragraphs with an empty line.</span></div>
+          </div>
+        </div>
+
+        <div class="panel media-panel">
+          <div class="panel-title"><div><h3>Campaign photo</h3><p>Used in the main image area on the public page.</p></div></div>
+          <div class="photo-editor">
+            <img id="photo-preview" alt="Current campaign preview">
+            <div class="photo-actions">
+              <div class="field"><label for="campaign-photo">Image URL</label><input id="campaign-photo" placeholder="/assets/photo.png"></div>
+              <label class="secondary-button upload-button" for="photo-upload"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/></svg>Upload image</label>
+              <input id="photo-upload" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+              <span class="field-help">PNG, JPG or WebP. Local uploads up to 3 MB.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-section" id="donations" aria-labelledby="donations-title">
+        <div class="section-heading"><div><p class="eyebrow">Giving options</p><h2 id="donations-title">Donation levels</h2></div><span class="section-hint">Six options keep the public layout balanced.</span></div>
+        <div class="repeater" id="tiers-list"></div>
+      </section>
+
+      <section class="admin-section" id="content" aria-labelledby="content-title">
+        <div class="section-heading"><div><p class="eyebrow">Trust & community</p><h2 id="content-title">FAQs and support messages</h2></div></div>
+        <div class="panel content-block">
+          <div class="panel-title"><div><h3>Frequently asked questions</h3><p>Answers appear in the accordion on the public page.</p></div><button class="secondary-button" id="add-faq" type="button">+ Add question</button></div>
+          <div class="repeater" id="faqs-list"></div>
+        </div>
+        <div class="panel content-block">
+          <div class="panel-title"><div><h3>Words of support</h3><p>Manage the messages shown beneath the campaign story.</p></div><button class="secondary-button" id="add-message" type="button">+ Add message</button></div>
+          <div class="repeater" id="messages-list"></div>
+        </div>
+      </section>
+
+      <div class="form-footer">
+        <button class="secondary-button danger-button" id="reset-button" type="button">Restore default content</button>
+        <button class="primary-button" type="submit">Save changes</button>
+      </div>
+    </form>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>Changes saved. The campaign preview is up to date.</div>
+  <dialog id="reset-dialog">
+    <form method="dialog" class="dialog-card">
+      <span class="dialog-icon" aria-hidden="true">!</span>
+      <h2>Restore default content?</h2>
+      <p>This removes all campaign edits saved in this browser. Your admin password will not change.</p>
+      <div class="dialog-actions"><button class="secondary-button" value="cancel">Cancel</button><button class="primary-button danger-fill" value="confirm">Restore defaults</button></div>
+    </form>
+  </dialog>
+  <script src="/campaign-data.js"></script>
+  <script src="/admin.js"></script>
+</body>
+</html>
