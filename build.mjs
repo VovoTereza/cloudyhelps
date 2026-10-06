@@ -24,9 +24,12 @@ const supabaseUrl = process.env.SUPABASE_URL || "https://ojwshgpvijmbcjyiggxl.su
 const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_jESyYbVDaDejhlzkjJ4kfw_iQVvYHY7";
 const runtimeConfig = `window.CloudySupabaseConfig=Object.freeze(${JSON.stringify({ url: supabaseUrl, publishableKey: supabasePublishableKey, proxyPath: "/supabase" })});`;
 const injection = `<script>${runtimeConfig}</script><script>${supabaseClient}</script><script>${campaignData}</script><script>${campaignRuntime}</script><script>${interactions}</script>`;
-const indexHtml = campaignHtml.includes("</body>")
-  ? campaignHtml.replace("</body>", `${injection}</body>`)
-  : `${campaignHtml}${injection}`;
+const campaignHtmlWithNetworkPolicy = campaignHtml
+  .replace("default-src 'none';", `default-src 'none'; connect-src 'self' ${supabaseUrl};`)
+  .replace("img-src 'self' data:;", `img-src 'self' data: ${supabaseUrl};`);
+const indexHtml = campaignHtmlWithNetworkPolicy.includes("</body>")
+  ? campaignHtmlWithNetworkPolicy.replace("</body>", `${injection}</body>`)
+  : `${campaignHtmlWithNetworkPolicy}${injection}`;
 
 await writeFile(path.join(output, "index.html"), indexHtml, "utf8");
 

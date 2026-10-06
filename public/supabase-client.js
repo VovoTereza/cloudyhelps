@@ -108,7 +108,7 @@
         headers: { "Content-Type": file.type || "application/octet-stream", "x-upsert": "true" },
         body: file
       }, session.access_token);
-      return `${apiBase}/storage/v1/object/public/campaign-media/${objectName}`;
+      return `${baseUrl}/storage/v1/object/public/campaign-media/${objectName}`;
     }
   };
 

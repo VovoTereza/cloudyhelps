@@ -44,6 +44,9 @@ const server = http.createServer(async (request, response) => {
         const campaignData = await readFile(path.join(projectRoot, "campaign-data.js"), "utf8");
         const campaignRuntime = await readFile(path.join(projectRoot, "campaign-runtime.js"), "utf8");
         const interactions = await readFile(path.join(projectRoot, "interactions.js"), "utf8");
+        html = html
+          .replace("default-src 'none';", "default-src 'none'; connect-src 'self' https://ojwshgpvijmbcjyiggxl.supabase.co;")
+          .replace("img-src 'self' data:;", "img-src 'self' data: https://ojwshgpvijmbcjyiggxl.supabase.co;");
         html = `${html}\n<script>${supabaseConfig}</script><script>${supabaseClient}</script><script>${campaignData}</script><script>${campaignRuntime}</script><script>${interactions}</script>`;
       }
       response.end(html);
