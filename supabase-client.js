@@ -1,6 +1,7 @@
 (() => {
   const config = window.CloudySupabaseConfig || {};
   const baseUrl = String(config.url || "").replace(/\/$/, "");
+  const apiBase = String(config.proxyPath || baseUrl).replace(/\/$/, "");
   const apiKey = String(config.publishableKey || "");
   const sessionKey = "cloudySupabaseSession";
 
@@ -17,7 +18,7 @@
   };
 
   const request = async (pathname, options = {}, accessToken = "") => {
-    const response = await fetch(`${baseUrl}${pathname}`, {
+    const response = await fetch(`${apiBase}${pathname}`, {
       ...options,
       headers: {
         apikey: apiKey,
@@ -107,7 +108,7 @@
         headers: { "Content-Type": file.type || "application/octet-stream", "x-upsert": "true" },
         body: file
       }, session.access_token);
-      return `${baseUrl}/storage/v1/object/public/campaign-media/${objectName}`;
+      return `${apiBase}/storage/v1/object/public/campaign-media/${objectName}`;
     }
   };
 

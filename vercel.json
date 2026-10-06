@@ -4,6 +4,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "public",
   "rewrites": [
+    { "source": "/supabase/:path*", "destination": "https://ojwshgpvijmbcjyiggxl.supabase.co/:path*" },
     { "source": "/", "destination": "/index.html" },
     { "source": "/help-single-mom-fight-stage-4-cancer", "destination": "/index.html" },
     { "source": "/admin", "destination": "/admin-login.html" },

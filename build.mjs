@@ -22,7 +22,7 @@ const [campaignHtml, supabaseClient, campaignData, campaignRuntime, interactions
 
 const supabaseUrl = process.env.SUPABASE_URL || "https://ojwshgpvijmbcjyiggxl.supabase.co";
 const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_jESyYbVDaDejhlzkjJ4kfw_iQVvYHY7";
-const runtimeConfig = `window.CloudySupabaseConfig=Object.freeze(${JSON.stringify({ url: supabaseUrl, publishableKey: supabasePublishableKey })});`;
+const runtimeConfig = `window.CloudySupabaseConfig=Object.freeze(${JSON.stringify({ url: supabaseUrl, publishableKey: supabasePublishableKey, proxyPath: "/supabase" })});`;
 const injection = `<script>${runtimeConfig}</script><script>${supabaseClient}</script><script>${campaignData}</script><script>${campaignRuntime}</script><script>${interactions}</script>`;
 const indexHtml = campaignHtml.includes("</body>")
   ? campaignHtml.replace("</body>", `${injection}</body>`)
