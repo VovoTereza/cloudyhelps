@@ -19,6 +19,12 @@
 
   const form = document.querySelector("#checkout-form");
   const message = document.querySelector("#checkout-message");
+  const submitButton = form.querySelector(".submit-button");
+  const submitLabel = submitButton.querySelector("span");
+  const paymentElement = document.querySelector("#payment-element");
+  const requestId = crypto.randomUUID();
+  let stripe = null;
+  let elements = null;
   const fields = [
     { input: document.querySelector("#email"), error: document.querySelector("#email-error"), message: "Enter a valid email address." },
     { input: document.querySelector("#first-name"), error: document.querySelector("#first-name-error"), message: "Enter your first name." },
@@ -41,7 +47,13 @@
     });
   });
 
-  form.addEventListener("submit", (event) => {
+  const showMessage = (text) => {
+    message.textContent = text;
+    message.hidden = false;
+    message.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+  };
+
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     message.hidden = true;
     const fieldsValid = fields.map(validateField).every(Boolean);
@@ -55,8 +67,53 @@
       return;
     }
 
-    message.innerHTML = "<strong>Payment processor not connected.</strong><br>No charge was made. Connect Stripe Elements and a server-side PaymentIntent endpoint to enable live donations.";
-    message.hidden = false;
-    message.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+    submitButton.disabled = true;
+    if (!elements) {
+      submitLabel.textContent = "Connecting securely…";
+      try {
+        const response = await fetch("/api/navenaut/create-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: Math.round(total * 100),
+            email: document.querySelector("#email").value.trim(),
+            name: `${document.querySelector("#first-name").value.trim()} ${document.querySelector("#last-name").value.trim()}`.trim(),
+            requestId
+          })
+        });
+        const payment = await response.json();
+        if (!response.ok) throw new Error(payment.error || "Unable to start the payment.");
+        if (typeof window.Stripe !== "function") throw new Error("The secure payment form could not be loaded.");
+
+        stripe = window.Stripe(payment.publishableKey);
+        elements = stripe.elements({ clientSecret: payment.clientSecret });
+        paymentElement.replaceChildren();
+        paymentElement.classList.add("is-connected");
+        elements.create("payment").mount(paymentElement);
+        submitLabel.textContent = "Confirm donation";
+        showMessage("The secure card form is ready. Review the payment details and confirm your donation.");
+      } catch (error) {
+        submitLabel.textContent = "Continue securely";
+        showMessage(error.message || "Unable to connect to Navenaut. Please try again.");
+      } finally {
+        submitButton.disabled = false;
+      }
+      return;
+    }
+
+    submitLabel.textContent = "Processing…";
+    try {
+      const result = await stripe.confirmPayment({
+        elements,
+        confirmParams: { return_url: `${window.location.origin}/payment-status.html` },
+        redirect: "if_required"
+      });
+      if (result.error) throw new Error(result.error.message || "Payment could not be completed.");
+      window.location.assign("/payment-status.html");
+    } catch (error) {
+      showMessage(error.message || "Payment could not be completed.");
+      submitLabel.textContent = "Confirm donation";
+      submitButton.disabled = false;
+    }
   });
 })();

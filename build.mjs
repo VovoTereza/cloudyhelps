@@ -38,6 +38,7 @@ const publicFiles = [
   "admin-campaign.html",
   "admin-donations.html",
   "admin-content.html",
+  "admin-gateway.html",
   "admin-login.html",
   "admin.css",
   "admin.js",
@@ -46,7 +47,8 @@ const publicFiles = [
   "supabase-client.js",
   "checkout.html",
   "checkout.css",
-  "checkout.js"
+  "checkout.js",
+  "payment-status.html"
 ];
 
 await Promise.all(publicFiles.map((file) => cp(path.join(root, file), path.join(output, file))));

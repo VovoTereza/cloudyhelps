@@ -37,6 +37,39 @@
   });
 
   document.body.classList.remove("auth-pending");
+  if (page === "gateway") {
+    const status = document.querySelector("#gateway-status");
+    const statusText = document.querySelector("#gateway-status-text");
+    const webhookState = document.querySelector("#gateway-webhook-state");
+    const note = document.querySelector("#gateway-note");
+    try {
+      const response = await fetch("/api/navenaut/status", { headers: { Accept: "application/json" } });
+      const gateway = await response.json();
+      if (!response.ok) throw new Error(gateway.error || "Gateway indisponível.");
+      status.classList.toggle("is-ready", gateway.configured);
+      status.classList.toggle("is-pending", !gateway.configured);
+      statusText.textContent = gateway.configured ? "Pronto para pagamentos" : "Aguardando credenciais";
+      webhookState.textContent = gateway.webhookConfigured ? "Assinatura configurada" : "Aguardando segredo";
+      document.querySelector("#gateway-environment").textContent = gateway.environment === "live" ? "Produção" : gateway.environment === "test" ? "Teste" : "Não configurado";
+      note.textContent = gateway.configured
+        ? "A integração está ativa. O checkout cria pagamentos pelo backend seguro da Vercel."
+        : "A integração foi instalada. Adicione as variáveis abaixo na Vercel para ativar cobranças reais.";
+    } catch {
+      status.classList.add("is-pending");
+      statusText.textContent = "Não foi possível verificar";
+      webhookState.textContent = "Indisponível";
+    }
+    document.querySelector("#copy-webhook").addEventListener("click", async () => {
+      const feedback = document.querySelector("#copy-feedback");
+      try {
+        await navigator.clipboard.writeText(document.querySelector("#webhook-url").textContent.trim());
+        feedback.textContent = "URL copiada.";
+      } catch {
+        feedback.textContent = "Selecione e copie a URL manualmente.";
+      }
+    });
+    return;
+  }
   if (page === "overview") return;
 
   try {

@@ -9,11 +9,13 @@ const requiredFiles = [
   "checkout.html",
   "checkout.css",
   "checkout.js",
+  "payment-status.html",
   "admin-login.html",
   "admin.html",
   "admin-campaign.html",
   "admin-donations.html",
   "admin-content.html",
+  "admin-gateway.html",
   "admin.css",
   "admin-auth.js",
   "admin.js",
@@ -37,7 +39,7 @@ if (missing.length) {
   throw new Error(`Production build is missing required files: ${missing.join(", ")}`);
 }
 
-const htmlFiles = ["index.html", "checkout.html", "admin-login.html", "admin.html", "admin-campaign.html", "admin-donations.html", "admin-content.html"];
+const htmlFiles = ["index.html", "checkout.html", "payment-status.html", "admin-login.html", "admin.html", "admin-campaign.html", "admin-donations.html", "admin-content.html", "admin-gateway.html"];
 const brokenReferences = [];
 const unsafeReferences = [];
 const attributePattern = /(?:src|href)=["']([^"']+)["']/gi;

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow">
+  <title>Gateway | Cloudy Impact</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/admin.css">
+</head>
+<body class="admin-page auth-pending" data-admin-page="gateway">
+  <header class="mobile-header"><a class="brand" href="/"><span class="brand-mark" aria-hidden="true">C</span><span>Cloudy <strong>Impact</strong></span></a><button class="icon-button" id="menu-button" type="button" aria-label="Abrir navegação" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></header>
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">C</span><span>Cloudy <strong>Impact</strong></span></a><div class="workspace-label"><span>Área da campanha</span><strong>Campanha da Jessica</strong></div>
+    <nav aria-label="Navegação administrativa">
+      <a href="/admin.html" class="nav-link"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Visão geral</a><a href="/admin-campaign.html" class="nav-link"><svg viewBox="0 0 24 24"><path d="M4 21v-7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v7"/><circle cx="12" cy="5" r="3"/></svg>Campanha</a><a href="/admin-donations.html" class="nav-link"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>Níveis de doação</a><a href="/admin-content.html" class="nav-link"><svg viewBox="0 0 24 24"><path d="M4 4h16v14H7l-3 3V4Z"/><path d="M8 9h8M8 13h5"/></svg>Perguntas e mensagens</a><a href="/admin-gateway.html" class="nav-link is-active" aria-current="page"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></svg>Gateway</a>
+    </nav>
+    <div class="sidebar-footer"><a class="secondary-button secondary-button--full" href="/" target="_blank" rel="noopener">Ver campanha</a><button class="text-button" id="logout-button" type="button">Sair</button></div>
+  </aside><button class="sidebar-backdrop" id="sidebar-backdrop" aria-label="Fechar navegação" hidden></button>
+  <main class="admin-main">
+    <div class="admin-topbar"><div><p class="eyebrow">Pagamentos</p><h1>Gateway</h1></div></div>
+    <div class="data-error" id="data-error" role="alert" hidden></div>
+    <section class="admin-section" aria-labelledby="gateway-title">
+      <div class="section-heading"><div><p class="eyebrow">Provedor instalado</p><h2 id="gateway-title">Navenaut</h2></div><span class="gateway-badge">Gateway principal</span></div>
+      <div class="panel gateway-card">
+        <div class="gateway-header"><div class="gateway-logo" aria-hidden="true">N</div><div><h3>Navenaut</h3><p>Integração para pagamentos internacionais em USD com dados de cartão tokenizados.</p></div><span class="gateway-status" id="gateway-status"><span class="status-dot"></span><span id="gateway-status-text">Verificando configuração…</span></span></div>
+        <div class="gateway-details">
+          <div><span>Ambiente</span><strong id="gateway-environment">Produção</strong></div>
+          <div><span>Fluxo</span><strong>Payment Element</strong></div>
+          <div><span>Moeda</span><strong>USD</strong></div>
+          <div><span>Webhook</span><strong id="gateway-webhook-state">Verificando…</strong></div>
+        </div>
+        <div class="gateway-note" id="gateway-note">As chaves ficam protegidas no backend da Vercel e nunca são enviadas ao navegador.</div>
+      </div>
+      <div class="panel content-block">
+        <div class="panel-title"><div><h3>Configuração necessária</h3><p>Adicione estas variáveis no ambiente Production da Vercel.</p></div></div>
+        <div class="env-list" aria-label="Variáveis de ambiente necessárias">
+          <code>NAUT_PUBLIC_KEY</code><code>NAUT_SECRET_KEY</code><code>NAUT_WEBHOOK_SECRET</code><code>SUPABASE_SERVICE_ROLE_KEY</code>
+        </div>
+      </div>
+      <div class="panel content-block">
+        <div class="panel-title"><div><h3>Endpoint do webhook</h3><p>Cadastre esta URL na Navenaut para os eventos de transação.</p></div></div>
+        <div class="copy-field"><code id="webhook-url">https://cloudyhelps.vercel.app/api/navenaut/webhook</code><button class="secondary-button" id="copy-webhook" type="button">Copiar URL</button></div>
+        <p class="field-help" id="copy-feedback" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+  </main>
+  <script src="/supabase-config.js"></script><script src="/supabase-client.js"></script><script src="/admin.js"></script>
+</body></html>

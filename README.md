@@ -27,7 +27,7 @@ Preview that exact output locally with `npm run preview`.
 3. Keep the **Other** framework preset and leave the build/output settings unchanged.
 4. Deploy.
 
-`vercel.json` runs `npm run build` for every deployment and serves the generated `public/` directory, so no dashboard overrides or environment variables are required for the current static site.
+`vercel.json` runs `npm run build` for every deployment and serves the generated `public/` directory. Supabase and Navenaut credentials must be configured in the Vercel project environment.
 
 The local preview server is intentionally named `dev-server.mjs`. Keeping it separate from conventional production entrypoint names prevents Vercel from mistaking the development server for a Node application.
 
@@ -39,4 +39,18 @@ Campaign content is stored in Supabase with public read access and administrator
 
 The Vercel build accepts `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. Their current public project values are used as build fallbacks because a publishable key is intentionally safe to expose in browser code; RLS remains the security boundary.
 
-Payment processing is not included. Enabling real donations still requires a payment provider and a server-side payment endpoint.
+## Navenaut gateway
+
+The checkout creates USD payment intents through `/api/navenaut/create-intent`. Card data is tokenized by the Payment Element and never passes through this project's server. Signed transaction events are received at `/api/navenaut/webhook` and persisted in Supabase.
+
+Configure these Vercel environment variables:
+
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (backend only)
+- `NAUT_PUBLIC_KEY`
+- `NAUT_SECRET_KEY` (backend only)
+- `NAUT_WEBHOOK_SECRET` (backend only)
+- `NAUT_PRODUCT_ID` (optional)
+
+Register `https://cloudyhelps.vercel.app/api/navenaut/webhook` in Navenaut for the `transaction.*` events used by the campaign.

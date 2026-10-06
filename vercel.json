@@ -12,6 +12,7 @@
     { "source": "/dashboard/campanha", "destination": "/admin-campaign.html" },
     { "source": "/dashboard/doacoes", "destination": "/admin-donations.html" },
     { "source": "/dashboard/conteudo", "destination": "/admin-content.html" },
+    { "source": "/dashboard/gateway", "destination": "/admin-gateway.html" },
     { "source": "/checkout", "destination": "/checkout.html" }
   ],
   "headers": [
