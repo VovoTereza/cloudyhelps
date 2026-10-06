@@ -1,6 +1,7 @@
 (() => {
   const sessionKey = "cloudyAdminSession";
-  const demoMode = new URLSearchParams(window.location.search).get("demo") === "1";
+  const demoMode = new URLSearchParams(window.location.search).get("demo") === "1"
+    || window.location.pathname.replace(/\/$/, "") === "/demo";
   if (!demoMode && sessionStorage.getItem(sessionKey) !== "active") {
     window.location.replace("/admin-login.html");
     return;
