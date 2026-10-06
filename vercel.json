@@ -8,7 +8,6 @@
     { "source": "/", "destination": "/index.html" },
     { "source": "/help-single-mom-fight-stage-4-cancer", "destination": "/index.html" },
     { "source": "/admin", "destination": "/admin-login.html" },
-    { "source": "/demo", "destination": "/admin.html?demo=1" },
     { "source": "/dashboard", "destination": "/admin.html" },
     { "source": "/checkout", "destination": "/checkout.html" }
   ],

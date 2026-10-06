@@ -8,7 +8,7 @@ Static campaign and checkout with Supabase-backed production administration, pre
 npm run dev
 ```
 
-Open `http://127.0.0.1:8000/`. The admin login is available at `/admin-login.html`, and the read-only dashboard demo is available at `/demo` after deployment (or `/admin.html?demo=1` locally).
+Open `http://127.0.0.1:8000/`. The administrator login is available at `/admin-login.html`; every dashboard route requires a valid Supabase Auth session.
 
 ## Production build
 
@@ -31,7 +31,7 @@ Preview that exact output locally with `npm run preview`.
 
 The local preview server is intentionally named `dev-server.mjs`. Keeping it separate from conventional production entrypoint names prevents Vercel from mistaking the development server for a Node application.
 
-The friendly routes `/admin`, `/dashboard`, `/checkout`, and `/help-single-mom-fight-stage-4-cancer` are configured in `vercel.json`.
+The friendly routes `/admin`, `/dashboard`, `/checkout`, and `/help-single-mom-fight-stage-4-cancer` are configured in `vercel.json`. Both dashboard routes enforce Supabase authentication in the browser before loading campaign data.
 
 ## Production data
 

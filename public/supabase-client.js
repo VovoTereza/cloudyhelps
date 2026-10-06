@@ -69,6 +69,14 @@
         return null;
       }
     },
+    async isAdmin(session = null) {
+      const activeSession = session || await this.getSession();
+      if (!activeSession?.access_token) return false;
+      return Boolean(await request("/rest/v1/rpc/is_campaign_admin", {
+        method: "POST",
+        body: JSON.stringify({})
+      }, activeSession.access_token));
+    },
     async signOut() {
       const session = readSession();
       try {

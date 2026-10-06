@@ -2,6 +2,7 @@
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.admin-page.auth-pending>*{visibility:hidden}
 button,input,textarea{font:inherit}
 button,a{-webkit-tap-highlight-color:transparent}
 a{color:inherit;text-decoration:none}

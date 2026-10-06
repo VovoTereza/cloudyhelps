@@ -1,13 +1,11 @@
 (async () => {
-  const demoMode = new URLSearchParams(window.location.search).get("demo") === "1"
-    || window.location.pathname.replace(/\/$/, "") === "/demo";
-  if (!demoMode) {
-    const session = await window.CloudySupabase.auth.getSession();
-    if (!session) {
-      window.location.replace("/admin-login.html");
-      return;
-    }
+  const session = await window.CloudySupabase.auth.getSession();
+  if (!session || !await window.CloudySupabase.auth.isAdmin(session)) {
+    if (session) await window.CloudySupabase.auth.signOut();
+    window.location.replace("/admin-login.html");
+    return;
   }
+  document.body.classList.remove("auth-pending");
 
   const store = window.CloudyCampaignStore;
   const form = document.querySelector("#campaign-form");
@@ -59,7 +57,7 @@
   };
 
   const markDirty = () => {
-    saveState.textContent = "Unsaved changes";
+    saveState.textContent = "Alterações não salvas";
     saveState.classList.add("is-dirty");
   };
 
@@ -70,10 +68,10 @@
       row.className = "repeat-row tier-row";
       row.dataset.index = index;
       row.append(
-        field("Amount", "amount", tier.amount, { type: "number", min: 1, step: 1 }),
-        field("Title", "title", tier.title, { maxLength: 55 }),
-        field("Description", "description", tier.description, { maxLength: 180 }),
-        field("Badge", "badge", tier.badge, { maxLength: 22 })
+        field("Valor", "amount", tier.amount, { type: "number", min: 1, step: 1 }),
+        field("Título", "title", tier.title, { maxLength: 55 }),
+        field("Descrição", "description", tier.description, { maxLength: 180 }),
+        field("Selo", "badge", tier.badge, { maxLength: 22 })
       );
       tiersList.append(row);
     });
@@ -87,9 +85,9 @@
       row.dataset.index = index;
       row.append(
         rowIndex(index),
-        field("Question", "question", faq.question, { maxLength: 120 }),
-        field("Answer", "answer", faq.answer, { textarea: true, maxLength: 500 }),
-        removeButton(`Remove question ${index + 1}`, () => {
+        field("Pergunta", "question", faq.question, { maxLength: 120 }),
+        field("Resposta", "answer", faq.answer, { textarea: true, maxLength: 500 }),
+        removeButton(`Remover pergunta ${index + 1}`, () => {
           data.faqs.splice(index, 1);
           renderFaqs();
           markDirty();
@@ -107,11 +105,11 @@
       row.dataset.index = index;
       row.append(
         rowIndex(index),
-        field("Name", "name", item.name, { maxLength: 60 }),
-        field("Amount", "amount", item.amount, { type: "number", min: 0, step: 1 }),
-        field("Date", "date", item.date, { maxLength: 40 }),
-        field("Message", "message", item.message, { textarea: true, maxLength: 320 }),
-        removeButton(`Remove message ${index + 1}`, () => {
+        field("Nome", "name", item.name, { maxLength: 60 }),
+        field("Valor", "amount", item.amount, { type: "number", min: 0, step: 1 }),
+        field("Data", "date", item.date, { maxLength: 40 }),
+        field("Mensagem", "message", item.message, { textarea: true, maxLength: 320 }),
+        removeButton(`Remover mensagem ${index + 1}`, () => {
           data.messages.splice(index, 1);
           renderMessages();
           updateMetrics();
@@ -129,7 +127,7 @@
     const goal = Number(document.querySelector("#campaign-goal").value || data.goal || 1);
     document.querySelector("#metric-raised").textContent = money(raised);
     document.querySelector("#metric-goal").textContent = money(goal);
-    document.querySelector("#metric-progress").textContent = `${Math.min(100, Math.round((raised / Math.max(goal, 1)) * 100))}% of goal`;
+    document.querySelector("#metric-progress").textContent = `${Math.min(100, Math.round((raised / Math.max(goal, 1)) * 100))}% da meta`;
     document.querySelector("#metric-messages").textContent = messagesList.children.length;
   };
 
@@ -148,7 +146,7 @@
     renderFaqs();
     renderMessages();
     updateMetrics();
-    saveState.textContent = "All changes saved";
+    saveState.textContent = "Todas as alterações foram salvas";
     saveState.classList.remove("is-dirty");
   };
 
@@ -174,7 +172,7 @@
       answer: row.querySelector('[name="answer"]').value.trim()
     })).filter((item) => item.question && item.answer),
     messages: readRows(messagesList, (row) => ({
-      name: row.querySelector('[name="name"]').value.trim() || "Anonymous",
+      name: row.querySelector('[name="name"]').value.trim() || "Anônimo",
       amount: Number(row.querySelector('[name="amount"]').value || 0),
       date: row.querySelector('[name="date"]').value.trim(),
       message: row.querySelector('[name="message"]').value.trim()
@@ -188,11 +186,10 @@
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (demoMode) return;
     if (!form.reportValidity()) return;
     const next = readData();
     if (!next.tiers.length || next.tiers.some((tier) => !tier.title || tier.amount <= 0)) {
-      alert("Every donation level needs a title and a positive amount.");
+      alert("Todos os níveis de doação precisam de um título e um valor positivo.");
       return;
     }
     const saveButton = form.querySelector('[type="submit"]');
@@ -200,14 +197,14 @@
     try {
       data = await store.save(next);
       updateMetrics();
-      saveState.textContent = "All changes saved";
+      saveState.textContent = "Todas as alterações foram salvas";
       saveState.classList.remove("is-dirty");
       clearTimeout(toastTimer);
-      toast.textContent = "Changes saved. The live campaign is up to date.";
+      toast.textContent = "Alterações salvas. A campanha publicada está atualizada.";
       toast.hidden = false;
       toastTimer = setTimeout(() => { toast.hidden = true; }, 3200);
-    } catch (error) {
-      alert(error.message || "Unable to save the campaign.");
+    } catch {
+      alert("Não foi possível salvar a campanha. Verifique sua sessão e tente novamente.");
     } finally {
       saveButton.disabled = false;
     }
@@ -223,7 +220,7 @@
 
   document.querySelector("#add-message").addEventListener("click", () => {
     data.messages = readData().messages;
-    data.messages.push({ name: "Anonymous", amount: 0, date: "Recently", message: "" });
+    data.messages.push({ name: "Anônimo", amount: 0, date: "Recentemente", message: "" });
     renderMessages();
     messagesList.lastElementChild?.querySelector("input")?.focus();
     updateMetrics();
@@ -239,7 +236,7 @@
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.size > 3 * 1024 * 1024) {
-      alert("Choose an image smaller than 3 MB.");
+      alert("Escolha uma imagem menor que 3 MB.");
       event.target.value = "";
       return;
     }
@@ -249,8 +246,8 @@
       photoInput.value = publicUrl;
       photoPreview.src = publicUrl;
       markDirty();
-    } catch (error) {
-      alert(error.message || "Unable to upload the image.");
+    } catch {
+      alert("Não foi possível enviar a imagem. Verifique o arquivo e tente novamente.");
       event.target.value = "";
     } finally {
       event.target.disabled = false;
@@ -264,20 +261,16 @@
     try {
       data = await store.reset();
       loadForm();
-      toast.textContent = "Default campaign content restored in production.";
+      toast.textContent = "O conteúdo padrão da campanha foi restaurado em produção.";
       toast.hidden = false;
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => { toast.hidden = true; toast.textContent = "Changes saved. The live campaign is up to date."; }, 3200);
-    } catch (error) {
-      alert(error.message || "Unable to restore the campaign.");
+      toastTimer = setTimeout(() => { toast.hidden = true; toast.textContent = "Alterações salvas. A campanha publicada está atualizada."; }, 3200);
+    } catch {
+      alert("Não foi possível restaurar a campanha. Tente novamente.");
     }
   });
 
   document.querySelector("#logout-button").addEventListener("click", async () => {
-    if (demoMode) {
-      window.location.replace("/admin-login.html");
-      return;
-    }
     await window.CloudySupabase.auth.signOut();
     window.location.replace("/admin-login.html");
   });
@@ -308,26 +301,5 @@
   }, { rootMargin: "-20% 0px -65%", threshold: [0, .25, .6] });
   sections.forEach((section) => observer.observe(section));
 
-  const enableDemoMode = () => {
-    document.body.classList.add("demo-mode");
-    document.querySelector("#admin-mode-label").textContent = "Dashboard demo";
-    document.querySelector("#mode-banner-title").textContent = "Read-only demonstration";
-    document.querySelector("#mode-banner-copy").textContent = "Explore the complete dashboard safely. Editing, uploads, saving, and content removal are unavailable in demo mode.";
-    saveState.textContent = "Demo data · read only";
-
-    form.querySelectorAll("input:not([type='file']), textarea").forEach((control) => {
-      control.readOnly = true;
-      control.setAttribute("aria-readonly", "true");
-    });
-    document.querySelector("#photo-upload").disabled = true;
-    document.querySelectorAll("#campaign-form button, button[form='campaign-form']").forEach((button) => {
-      button.disabled = true;
-    });
-    const uploadButton = document.querySelector(".upload-button");
-    uploadButton.setAttribute("aria-disabled", "true");
-    document.querySelector("#logout-button").textContent = "Exit demo";
-  };
-
   loadForm();
-  if (demoMode) enableDemoMode();
 })();
