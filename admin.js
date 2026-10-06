@@ -49,10 +49,13 @@
     const statusText = document.querySelector("#gateway-status-text");
     const webhookState = document.querySelector("#gateway-webhook-state");
     const note = document.querySelector("#gateway-note");
-    try {
-      const response = await fetch("/api/navenaut/status", { headers: { Accept: "application/json" } });
-      const gateway = await response.json();
-      if (!response.ok) throw new Error(gateway.error || "Gateway indisponível.");
+    const gatewayForm = document.querySelector("#gateway-form");
+    const formMessage = document.querySelector("#gateway-form-message");
+    const saveButton = document.querySelector("#save-gateway");
+    const gatewayToast = document.querySelector("#gateway-toast");
+    let currentConfig = null;
+
+    const renderGateway = (gateway) => {
       status.classList.toggle("is-ready", gateway.configured);
       status.classList.toggle("is-pending", !gateway.configured);
       statusText.textContent = gateway.configured ? "Pronto para pagamentos" : "Aguardando credenciais";
@@ -60,12 +63,71 @@
       document.querySelector("#gateway-environment").textContent = gateway.environment === "live" ? "Produção" : gateway.environment === "test" ? "Teste" : "Não configurado";
       note.textContent = gateway.configured
         ? "A integração está ativa. O checkout cria pagamentos pelo backend seguro da Vercel."
-        : "A integração foi instalada. Adicione as variáveis abaixo na Vercel para ativar cobranças reais.";
-    } catch {
+        : "Cadastre as credenciais abaixo para ativar os pagamentos no checkout.";
+      document.querySelector("#naut-public-key").value = gateway.publicKey || "";
+      document.querySelector("#naut-product-id").value = gateway.productId || "";
+      document.querySelector("#naut-secret-key").placeholder = gateway.secretKeyConfigured ? "Configurada — deixe em branco para manter" : "sk_live_…";
+      document.querySelector("#naut-webhook-secret").placeholder = gateway.webhookSecretConfigured ? "Configurado — deixe em branco para manter" : "Segredo de assinatura";
+      if (gateway.secretKeyConfigured) document.querySelector("#secret-key-help").textContent = "Chave configurada. Preencha somente para substituí-la.";
+      if (gateway.webhookSecretConfigured) document.querySelector("#webhook-secret-help").textContent = "Segredo configurado. Preencha somente para substituí-lo.";
+    };
+
+    const configRequest = async (options = {}) => {
+      const response = await fetch("/api/navenaut/config", {
+        ...options,
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          ...(options.body ? { "Content-Type": "application/json" } : {}),
+          ...options.headers
+        }
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Não foi possível acessar a configuração do gateway.");
+      return payload;
+    };
+
+    try {
+      currentConfig = await configRequest();
+      renderGateway(currentConfig);
+    } catch (error) {
       status.classList.add("is-pending");
       statusText.textContent = "Não foi possível verificar";
       webhookState.textContent = "Indisponível";
+      formMessage.textContent = error.message;
+      formMessage.hidden = false;
     }
+
+    gatewayForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      formMessage.hidden = true;
+      saveButton.disabled = true;
+      saveButton.textContent = "Salvando…";
+      const values = new FormData(gatewayForm);
+      try {
+        currentConfig = await configRequest({
+          method: "POST",
+          body: JSON.stringify({
+            publicKey: values.get("publicKey"),
+            secretKey: values.get("secretKey"),
+            webhookSecret: values.get("webhookSecret"),
+            productId: values.get("productId")
+          })
+        });
+        document.querySelector("#naut-secret-key").value = "";
+        document.querySelector("#naut-webhook-secret").value = "";
+        renderGateway(currentConfig);
+        gatewayToast.hidden = false;
+        setTimeout(() => { gatewayToast.hidden = true; }, 3200);
+      } catch (error) {
+        formMessage.textContent = error.message;
+        formMessage.hidden = false;
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "Salvar credenciais";
+      }
+    });
+
     document.querySelector("#copy-webhook").addEventListener("click", async () => {
       const feedback = document.querySelector("#copy-feedback");
       try {

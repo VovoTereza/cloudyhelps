@@ -30,10 +30,16 @@
         <div class="gateway-note" id="gateway-note">As chaves ficam protegidas no backend da Vercel e nunca são enviadas ao navegador.</div>
       </div>
       <div class="panel content-block">
-        <div class="panel-title"><div><h3>Configuração necessária</h3><p>Adicione estas variáveis no ambiente Production da Vercel.</p></div></div>
-        <div class="env-list" aria-label="Variáveis de ambiente necessárias">
-          <code>NAUT_PUBLIC_KEY</code><code>NAUT_SECRET_KEY</code><code>NAUT_WEBHOOK_SECRET</code><code>SUPABASE_SERVICE_ROLE_KEY</code>
-        </div>
+        <div class="panel-title"><div><h3>Credenciais da Navenaut</h3><p>Cadastre as chaves aqui. Os segredos são criptografados e usados somente pelo backend.</p></div><span class="secure-label">Armazenamento seguro</span></div>
+        <form id="gateway-form" autocomplete="off">
+          <div class="form-grid gateway-form-grid">
+            <div class="field field--wide"><label for="naut-public-key">Chave pública</label><input id="naut-public-key" name="publicKey" type="text" inputmode="text" spellcheck="false" placeholder="pk_live_…" required><span class="field-help">Disponível no painel da Navenaut em Credenciais da API.</span></div>
+            <div class="field"><label for="naut-secret-key">Chave secreta</label><input id="naut-secret-key" name="secretKey" type="password" spellcheck="false" placeholder="sk_live_…"><span class="field-help" id="secret-key-help">Nunca será exibida novamente após salvar.</span></div>
+            <div class="field"><label for="naut-webhook-secret">Segredo do webhook</label><input id="naut-webhook-secret" name="webhookSecret" type="password" spellcheck="false" placeholder="Segredo de assinatura"><span class="field-help" id="webhook-secret-help">Usado para validar eventos enviados pela Navenaut.</span></div>
+            <div class="field field--wide"><label for="naut-product-id">ID do produto <span class="optional-label">Opcional</span></label><input id="naut-product-id" name="productId" type="text" spellcheck="false" placeholder="Informe apenas se sua conta exigir um produto específico"></div>
+          </div>
+          <div class="gateway-form-footer"><p class="form-message" id="gateway-form-message" role="alert" hidden></p><button class="primary-button" id="save-gateway" type="submit">Salvar credenciais</button></div>
+        </form>
       </div>
       <div class="panel content-block">
         <div class="panel-title"><div><h3>Endpoint do webhook</h3><p>Cadastre esta URL na Navenaut para os eventos de transação.</p></div></div>
@@ -42,5 +48,6 @@
       </div>
     </section>
   </main>
+  <div class="toast" id="gateway-toast" role="status" aria-live="polite" hidden>Credenciais salvas com segurança.</div>
   <script src="/supabase-config.js"></script><script src="/supabase-client.js"></script><script src="/admin.js"></script>
 </body></html>

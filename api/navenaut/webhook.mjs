@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { loadGatewayConfig } from "../_lib/gateway-config.mjs";
 
 export const config = { api: { bodyParser: false } };
 
@@ -22,7 +23,9 @@ export default async function handler(request, response) {
 
   const rawBody = await readRawBody(request);
   const signature = String(request.headers["x-webhook-signature"] || "");
-  if (!validSignature(rawBody, signature, process.env.NAUT_WEBHOOK_SECRET || "")) {
+  let gatewayConfig;
+  try { gatewayConfig = await loadGatewayConfig(); } catch { gatewayConfig = null; }
+  if (!validSignature(rawBody, signature, gatewayConfig?.webhookSecret || "")) {
     return response.status(401).json({ error: "Assinatura de webhook inválida." });
   }
 

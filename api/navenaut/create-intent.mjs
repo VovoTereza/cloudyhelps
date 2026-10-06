@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { loadGatewayConfig } from "../_lib/gateway-config.mjs";
 
 const API_URL = "https://navenaut.com/api/public/v1/payments/create-intent";
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -9,8 +10,10 @@ export default async function handler(request, response) {
     return response.status(405).json({ error: "Método não permitido." });
   }
 
-  const publicKey = process.env.NAUT_PUBLIC_KEY || "";
-  const secretKey = process.env.NAUT_SECRET_KEY || "";
+  let gatewayConfig;
+  try { gatewayConfig = await loadGatewayConfig(); } catch { gatewayConfig = null; }
+  const publicKey = gatewayConfig?.publicKey || "";
+  const secretKey = gatewayConfig?.secretKey || "";
   if (!publicKey || !secretKey) {
     return response.status(503).json({ error: "O gateway Navenaut ainda não possui credenciais de produção." });
   }
@@ -36,7 +39,7 @@ export default async function handler(request, response) {
     customerData: { email, name },
     requestId
   };
-  if (process.env.NAUT_PRODUCT_ID) payload.productId = process.env.NAUT_PRODUCT_ID;
+  if (gatewayConfig?.productId) payload.productId = gatewayConfig.productId;
 
   try {
     const gatewayResponse = await fetch(API_URL, {
