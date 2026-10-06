@@ -29,6 +29,8 @@ Preview that exact output locally with `npm run preview`.
 
 `vercel.json` runs `npm run build` for every deployment and serves the generated `public/` directory, so no dashboard overrides or environment variables are required for the current static site.
 
+The local preview server is intentionally named `dev-server.mjs`. Keeping it separate from conventional production entrypoint names prevents Vercel from mistaking the development server for a Node application.
+
 The friendly routes `/admin`, `/dashboard`, `/checkout`, and `/help-single-mom-fight-stage-4-cancer` are configured in `vercel.json`.
 
 ## Administration limitation

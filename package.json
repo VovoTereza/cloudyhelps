@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node server.mjs",
+    "dev": "node dev-server.mjs",
     "build": "node build.mjs && node check-build.mjs",
     "check": "node check-build.mjs",
-    "preview": "node server.mjs public"
+    "preview": "node dev-server.mjs public"
   },
   "engines": {
     "node": ">=20"
