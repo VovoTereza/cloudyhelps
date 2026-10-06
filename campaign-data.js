@@ -19,8 +19,8 @@
     ],
     faqs: [
       { question: "Where does my donation go?", answer: "Donations support radiation treatment, targeted therapy, medical scans, prescriptions, co-pays, transport, and other related medical expenses." },
-      { question: "Is my payment secure?", answer: "The checkout is designed for a secure payment provider. This local preview does not process or store card details." },
-      { question: "What happens after I donate?", answer: "After a successful live payment, donors receive a confirmation and the campaign total can be updated by the organizer." },
+      { question: "Is my payment secure?", answer: "Payment processing is not yet enabled. No card details are currently collected or stored by this site." },
+      { question: "What happens after I donate?", answer: "Live donations and confirmation receipts will become available after the payment provider is connected." },
       { question: "Can I cancel or refund my donation?", answer: "Refund requests should be handled by the campaign organizer according to the connected payment provider's policy." },
       { question: "What if you raise more than the goal?", answer: "Any amount beyond the goal will continue supporting Jessica's treatment, recovery, and related family expenses." },
       { question: "How do I know this is real?", answer: "Campaign verification details and organizer updates should be published here as they become available." }
@@ -44,24 +44,23 @@
 
   window.CloudyCampaignDefaults = defaults;
   window.CloudyCampaignStore = {
-    key: "cloudyCampaignData",
-    load() {
+    async load() {
       try {
-        const stored = JSON.parse(localStorage.getItem(this.key) || "null");
+        const stored = await window.CloudySupabase.campaign.load();
         return merge(stored && typeof stored === "object" ? stored : {});
-      } catch {
+      } catch (error) {
+        console.error("Unable to load campaign data from Supabase.", error);
         return clone(defaults);
       }
     },
-    save(value) {
+    async save(value) {
       const normalized = merge(value);
-      localStorage.setItem(this.key, JSON.stringify(normalized));
-      window.dispatchEvent(new CustomEvent("cloudy:campaign-updated", { detail: normalized }));
-      return normalized;
+      const saved = merge(await window.CloudySupabase.campaign.save(normalized));
+      window.dispatchEvent(new CustomEvent("cloudy:campaign-updated", { detail: saved }));
+      return saved;
     },
-    reset() {
-      localStorage.removeItem(this.key);
-      return clone(defaults);
+    async reset() {
+      return this.save(clone(defaults));
     }
   };
 })();

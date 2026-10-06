@@ -12,14 +12,18 @@ if (!campaignFile) throw new Error("The source campaign HTML file was not found.
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 
-const [campaignHtml, campaignData, campaignRuntime, interactions] = await Promise.all([
+const [campaignHtml, supabaseClient, campaignData, campaignRuntime, interactions] = await Promise.all([
   readFile(path.join(root, campaignFile), "utf8"),
+  readFile(path.join(root, "supabase-client.js"), "utf8"),
   readFile(path.join(root, "campaign-data.js"), "utf8"),
   readFile(path.join(root, "campaign-runtime.js"), "utf8"),
   readFile(path.join(root, "interactions.js"), "utf8")
 ]);
 
-const injection = `<script>${campaignData}</script><script>${campaignRuntime}</script><script>${interactions}</script>`;
+const supabaseUrl = process.env.SUPABASE_URL || "https://ojwshgpvijmbcjyiggxl.supabase.co";
+const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_jESyYbVDaDejhlzkjJ4kfw_iQVvYHY7";
+const runtimeConfig = `window.CloudySupabaseConfig=Object.freeze(${JSON.stringify({ url: supabaseUrl, publishableKey: supabasePublishableKey })});`;
+const injection = `<script>${runtimeConfig}</script><script>${supabaseClient}</script><script>${campaignData}</script><script>${campaignRuntime}</script><script>${interactions}</script>`;
 const indexHtml = campaignHtml.includes("</body>")
   ? campaignHtml.replace("</body>", `${injection}</body>`)
   : `${campaignHtml}${injection}`;
@@ -33,12 +37,14 @@ const publicFiles = [
   "admin.js",
   "admin-auth.js",
   "campaign-data.js",
+  "supabase-client.js",
   "checkout.html",
   "checkout.css",
   "checkout.js"
 ];
 
 await Promise.all(publicFiles.map((file) => cp(path.join(root, file), path.join(output, file))));
+await writeFile(path.join(output, "supabase-config.js"), runtimeConfig, "utf8");
 await cp(path.join(root, "assets"), path.join(output, "assets"), { recursive: true });
 await writeFile(path.join(output, "robots.txt"), "User-agent: *\nDisallow: /admin\nDisallow: /admin-login\n", "utf8");
 

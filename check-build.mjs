@@ -15,6 +15,8 @@ const requiredFiles = [
   "admin-auth.js",
   "admin.js",
   "campaign-data.js",
+  "supabase-client.js",
+  "supabase-config.js",
   "robots.txt"
 ];
 

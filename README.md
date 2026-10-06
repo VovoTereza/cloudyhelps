@@ -1,6 +1,6 @@
 # Cloudy Impact campaign
 
-Static campaign, checkout and local administration interface prepared for Vercel.
+Static campaign and checkout with Supabase-backed production administration, prepared for Vercel.
 
 ## Local development
 
@@ -33,6 +33,10 @@ The local preview server is intentionally named `dev-server.mjs`. Keeping it sep
 
 The friendly routes `/admin`, `/dashboard`, `/checkout`, and `/help-single-mom-fight-stage-4-cancer` are configured in `vercel.json`.
 
-## Administration limitation
+## Production data
 
-The current login and campaign data use browser storage. They work on Vercel over HTTPS, but changes only affect the browser where they were made. Shared production administration requires server-side authentication and a database.
+Campaign content is stored in Supabase with public read access and administrator-only writes enforced by row-level security. Authentication uses Supabase Auth, and campaign media is stored in the public `campaign-media` bucket with administrator-only uploads.
+
+The Vercel build accepts `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. Their current public project values are used as build fallbacks because a publishable key is intentionally safe to expose in browser code; RLS remains the security boundary.
+
+Payment processing is not included. Enabling real donations still requires a payment provider and a server-side payment endpoint.

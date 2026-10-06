@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Cloudy Impact local campaign administration access.">
+  <meta name="description" content="Secure Cloudy Impact campaign administration access.">
   <meta name="robots" content="noindex,nofollow">
   <title>Admin access | Cloudy Impact</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,7 +28,7 @@
 
       <div class="local-notice" role="note">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4m0 4h.01"/><path d="M10.3 3.7 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 3.7a2 2 0 0 0-3.4 0Z"/></svg>
-        <span><strong>Local preview.</strong> Access and campaign data are stored only in this browser. Use a server-side login and database before publishing.</span>
+        <span><strong>Secure production access.</strong> Authentication and campaign data are protected by Supabase Auth and row-level security.</span>
       </div>
 
       <form id="auth-form" novalidate>
@@ -68,6 +68,8 @@
 
     <a class="back-link" href="/">← Back to campaign</a>
   </main>
+  <script src="/supabase-config.js"></script>
+  <script src="/supabase-client.js"></script>
   <script src="/admin-auth.js"></script>
 </body>
 </html>

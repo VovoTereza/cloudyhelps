@@ -37,13 +37,13 @@
 
   <main class="admin-main">
     <div class="admin-topbar">
-      <div><p class="eyebrow" id="admin-mode-label">Local admin</p><h1>Campaign dashboard</h1></div>
+      <div><p class="eyebrow" id="admin-mode-label">Production admin</p><h1>Campaign dashboard</h1></div>
       <button class="primary-button" type="submit" form="campaign-form"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save changes</button>
     </div>
 
     <div class="prototype-banner" id="mode-banner" role="note">
       <span class="status-dot"></span>
-      <div><strong id="mode-banner-title">Local management mode</strong><span id="mode-banner-copy">Changes are saved in this browser and update the local campaign preview. They are not synchronized to a server.</span></div>
+      <div><strong id="mode-banner-title">Live management mode</strong><span id="mode-banner-copy">Changes are securely saved to Supabase and update the production campaign for every visitor.</span></div>
     </div>
 
     <form id="campaign-form">
@@ -79,7 +79,7 @@
               <div class="field"><label for="campaign-photo">Image URL</label><input id="campaign-photo" placeholder="/assets/photo.png"></div>
               <label class="secondary-button upload-button" for="photo-upload"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/></svg>Upload image</label>
               <input id="photo-upload" type="file" accept="image/png,image/jpeg,image/webp" hidden>
-              <span class="field-help">PNG, JPG or WebP. Local uploads up to 3 MB.</span>
+              <span class="field-help">PNG, JPG, GIF or WebP. Secure uploads up to 3 MB.</span>
             </div>
           </div>
         </div>
@@ -109,15 +109,17 @@
     </form>
   </main>
 
-  <div class="toast" id="toast" role="status" aria-live="polite" hidden>Changes saved. The campaign preview is up to date.</div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>Changes saved. The live campaign is up to date.</div>
   <dialog id="reset-dialog">
     <form method="dialog" class="dialog-card">
       <span class="dialog-icon" aria-hidden="true">!</span>
       <h2>Restore default content?</h2>
-      <p>This removes all campaign edits saved in this browser. Your admin password will not change.</p>
+      <p>This replaces the live campaign content with its original defaults. Your administrator account will not change.</p>
       <div class="dialog-actions"><button class="secondary-button" value="cancel">Cancel</button><button class="primary-button danger-fill" value="confirm">Restore defaults</button></div>
     </form>
   </dialog>
+  <script src="/supabase-config.js"></script>
+  <script src="/supabase-client.js"></script>
   <script src="/campaign-data.js"></script>
   <script src="/admin.js"></script>
 </body>

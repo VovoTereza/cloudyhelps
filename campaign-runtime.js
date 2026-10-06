@@ -1,7 +1,7 @@
-(() => {
+(async () => {
   const store = window.CloudyCampaignStore;
   if (!store) return;
-  const data = store.load();
+  const data = await store.load();
   const leafElements = (root = document.body) => Array.from(root.querySelectorAll("h1,h2,h3,p,span,strong,div")).filter((element) => !element.children.length);
   const setLeafMatching = (pattern, value, root = document.body) => {
     leafElements(root).filter((element) => pattern.test(element.textContent.trim())).forEach((element) => { element.textContent = value; });
@@ -17,6 +17,7 @@
 
   setLeafMatching(/^Urgent appeal$/i, data.status || "Urgent appeal");
   setLeafMatching(/^Goal \$[\d,.]+$/i, `Goal ${money(data.goal)}`);
+  setLeafMatching(/^Payment details are handled through Cloudy Impact's encrypted Stripe checkout\.$/i, "Payment processing is not yet enabled; no card details are collected.");
   const donationRegion = document.querySelector("#tier-list");
   const raisedValue = Array.from(donationRegion?.querySelectorAll("span") || []).find((element) =>
     /^\$[\d,.]+\s*$/.test(element.firstChild?.textContent || "") && /raised/i.test(element.textContent)

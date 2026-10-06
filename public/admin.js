@@ -1,10 +1,12 @@
-(() => {
-  const sessionKey = "cloudyAdminSession";
+(async () => {
   const demoMode = new URLSearchParams(window.location.search).get("demo") === "1"
     || window.location.pathname.replace(/\/$/, "") === "/demo";
-  if (!demoMode && sessionStorage.getItem(sessionKey) !== "active") {
-    window.location.replace("/admin-login.html");
-    return;
+  if (!demoMode) {
+    const session = await window.CloudySupabase.auth.getSession();
+    if (!session) {
+      window.location.replace("/admin-login.html");
+      return;
+    }
   }
 
   const store = window.CloudyCampaignStore;
@@ -16,7 +18,7 @@
   const saveState = document.querySelector("#save-state");
   const photoInput = document.querySelector("#campaign-photo");
   const photoPreview = document.querySelector("#photo-preview");
-  let data = store.load();
+  let data = await store.load();
   let toastTimer;
 
   const iconTrash = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg>';
@@ -184,7 +186,7 @@
     if (event.target.matches("#campaign-raised, #campaign-goal")) updateMetrics();
   });
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (demoMode) return;
     if (!form.reportValidity()) return;
@@ -193,13 +195,22 @@
       alert("Every donation level needs a title and a positive amount.");
       return;
     }
-    data = store.save(next);
-    updateMetrics();
-    saveState.textContent = "All changes saved";
-    saveState.classList.remove("is-dirty");
-    clearTimeout(toastTimer);
-    toast.hidden = false;
-    toastTimer = setTimeout(() => { toast.hidden = true; }, 3200);
+    const saveButton = form.querySelector('[type="submit"]');
+    saveButton.disabled = true;
+    try {
+      data = await store.save(next);
+      updateMetrics();
+      saveState.textContent = "All changes saved";
+      saveState.classList.remove("is-dirty");
+      clearTimeout(toastTimer);
+      toast.textContent = "Changes saved. The live campaign is up to date.";
+      toast.hidden = false;
+      toastTimer = setTimeout(() => { toast.hidden = true; }, 3200);
+    } catch (error) {
+      alert(error.message || "Unable to save the campaign.");
+    } finally {
+      saveButton.disabled = false;
+    }
   });
 
   document.querySelector("#add-faq").addEventListener("click", () => {
@@ -224,7 +235,7 @@
   });
   photoPreview.addEventListener("error", () => { photoPreview.src = "/assets/jessica-family.png"; }, { passive: true });
 
-  document.querySelector("#photo-upload").addEventListener("change", (event) => {
+  document.querySelector("#photo-upload").addEventListener("change", async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.size > 3 * 1024 * 1024) {
@@ -232,33 +243,42 @@
       event.target.value = "";
       return;
     }
-    const reader = new FileReader();
-    reader.addEventListener("load", () => {
-      photoInput.value = reader.result;
-      photoPreview.src = reader.result;
+    event.target.disabled = true;
+    try {
+      const publicUrl = await window.CloudySupabase.storage.uploadCampaignImage(file);
+      photoInput.value = publicUrl;
+      photoPreview.src = publicUrl;
       markDirty();
-    });
-    reader.readAsDataURL(file);
+    } catch (error) {
+      alert(error.message || "Unable to upload the image.");
+      event.target.value = "";
+    } finally {
+      event.target.disabled = false;
+    }
   });
 
   const resetDialog = document.querySelector("#reset-dialog");
   document.querySelector("#reset-button").addEventListener("click", () => resetDialog.showModal());
-  resetDialog.addEventListener("close", () => {
+  resetDialog.addEventListener("close", async () => {
     if (resetDialog.returnValue !== "confirm") return;
-    data = store.reset();
-    loadForm();
-    toast.textContent = "Default campaign content restored.";
-    toast.hidden = false;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { toast.hidden = true; toast.textContent = "Changes saved. The campaign preview is up to date."; }, 3200);
+    try {
+      data = await store.reset();
+      loadForm();
+      toast.textContent = "Default campaign content restored in production.";
+      toast.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast.hidden = true; toast.textContent = "Changes saved. The live campaign is up to date."; }, 3200);
+    } catch (error) {
+      alert(error.message || "Unable to restore the campaign.");
+    }
   });
 
-  document.querySelector("#logout-button").addEventListener("click", () => {
+  document.querySelector("#logout-button").addEventListener("click", async () => {
     if (demoMode) {
       window.location.replace("/admin-login.html");
       return;
     }
-    sessionStorage.removeItem(sessionKey);
+    await window.CloudySupabase.auth.signOut();
     window.location.replace("/admin-login.html");
   });
 
