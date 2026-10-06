@@ -79,10 +79,16 @@
     },
     async signOut() {
       const session = readSession();
+      writeSession(null);
+      if (!session?.access_token) return;
+
       try {
-        if (session?.access_token) await request("/auth/v1/logout", { method: "POST" }, session.access_token);
-      } finally {
-        writeSession(null);
+        await Promise.race([
+          request("/auth/v1/logout", { method: "POST" }, session.access_token),
+          new Promise((resolve) => setTimeout(resolve, 1500))
+        ]);
+      } catch {
+        // The local session is already cleared, even if remote revocation is unavailable.
       }
     }
   };
