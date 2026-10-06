@@ -35,6 +35,9 @@ await writeFile(path.join(output, "index.html"), indexHtml, "utf8");
 
 const publicFiles = [
   "admin.html",
+  "admin-campaign.html",
+  "admin-donations.html",
+  "admin-content.html",
   "admin-login.html",
   "admin.css",
   "admin.js",

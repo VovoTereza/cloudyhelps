@@ -9,6 +9,9 @@
     { "source": "/help-single-mom-fight-stage-4-cancer", "destination": "/index.html" },
     { "source": "/admin", "destination": "/admin-login.html" },
     { "source": "/dashboard", "destination": "/admin.html" },
+    { "source": "/dashboard/campanha", "destination": "/admin-campaign.html" },
+    { "source": "/dashboard/doacoes", "destination": "/admin-donations.html" },
+    { "source": "/dashboard/conteudo", "destination": "/admin-content.html" },
     { "source": "/checkout", "destination": "/checkout.html" }
   ],
   "headers": [

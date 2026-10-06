@@ -42,8 +42,21 @@
     messages: Array.isArray(stored.messages) ? stored.messages : clone(defaults.messages)
   });
 
+  const productionData = (stored) => {
+    if (!stored || typeof stored !== "object") throw new Error("Production campaign data was not found.");
+    return {
+      ...stored,
+      tiers: Array.isArray(stored.tiers) ? stored.tiers : [],
+      faqs: Array.isArray(stored.faqs) ? stored.faqs : [],
+      messages: Array.isArray(stored.messages) ? stored.messages : []
+    };
+  };
+
   window.CloudyCampaignDefaults = defaults;
   window.CloudyCampaignStore = {
+    async loadProduction() {
+      return productionData(await window.CloudySupabase.campaign.load());
+    },
     async load() {
       try {
         const stored = await window.CloudySupabase.campaign.load();
@@ -54,13 +67,10 @@
       }
     },
     async save(value) {
-      const normalized = merge(value);
-      const saved = merge(await window.CloudySupabase.campaign.save(normalized));
+      const normalized = productionData(value);
+      const saved = productionData(await window.CloudySupabase.campaign.save(normalized));
       window.dispatchEvent(new CustomEvent("cloudy:campaign-updated", { detail: saved }));
       return saved;
-    },
-    async reset() {
-      return this.save(clone(defaults));
     }
   };
 })();
