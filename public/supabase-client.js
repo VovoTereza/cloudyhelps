@@ -18,17 +18,28 @@
   };
 
   const request = async (pathname, options = {}, accessToken = "") => {
-    const response = await fetch(`${apiBase}${pathname}`, {
-      ...options,
-      headers: {
-        apikey: apiKey,
-        Authorization: `Bearer ${accessToken || apiKey}`,
-        ...(options.body && !(options.body instanceof Blob) && !(options.body instanceof FormData)
-          ? { "Content-Type": "application/json" }
-          : {}),
-        ...options.headers
-      }
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    let response;
+    try {
+      response = await fetch(`${apiBase}${pathname}`, {
+        ...options,
+        signal: options.signal || controller.signal,
+        headers: {
+          apikey: apiKey,
+          Authorization: `Bearer ${accessToken || apiKey}`,
+          ...(options.body && !(options.body instanceof Blob) && !(options.body instanceof FormData)
+            ? { "Content-Type": "application/json" }
+            : {}),
+          ...options.headers
+        }
+      });
+    } catch (error) {
+      if (error?.name === "AbortError") throw new Error("A conexão com o Supabase excedeu o tempo limite.");
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
     const text = await response.text();
     let payload = null;
     try { payload = text ? JSON.parse(text) : null; } catch { payload = text; }

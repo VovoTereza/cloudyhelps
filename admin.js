@@ -1,6 +1,13 @@
 (async () => {
-  const session = await window.CloudySupabase.auth.getSession();
-  if (!session || !await window.CloudySupabase.auth.isAdmin(session)) {
+  let session = null;
+  let authorized = false;
+  try {
+    session = await window.CloudySupabase.auth.getSession();
+    authorized = Boolean(session && await window.CloudySupabase.auth.isAdmin(session));
+  } catch {
+    authorized = false;
+  }
+  if (!authorized) {
     if (session) await window.CloudySupabase.auth.signOut();
     window.location.replace("/admin-login.html");
     return;
