@@ -211,6 +211,155 @@
     });
     return;
   }
+  if (page === "tracking") {
+    const trackingForm = document.querySelector("#tracking-form");
+    const formMessage = document.querySelector("#tracking-form-message");
+    const saveButton = document.querySelector("#save-tracking");
+    const trackingToast = document.querySelector("#tracking-toast");
+    const totalLabel = document.querySelector("#tracking-total");
+    const platforms = ["meta", "google", "tiktok"];
+    const platformLabels = { meta: "Meta", google: "Google", tiktok: "TikTok" };
+    const destinationLabels = { meta: "Pixel ID", google: "Measurement ID", tiktok: "Pixel Code" };
+    const destinationPlaceholders = { meta: "123456789012345", google: "G-XXXXXXXXXX", tiktok: "XXXXXXXXXXXXXX" };
+    const secretLabels = { meta: "Access token", google: "API secret", tiktok: "Access token" };
+    let currentConfig = { platforms: { meta: [], google: [], tiktok: [] } };
+
+    const configRequest = async (options = {}) => {
+      const response = await fetch("/api/tracking/config", {
+        ...options,
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          ...(options.body ? { "Content-Type": "application/json" } : {}),
+          ...options.headers
+        }
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Não foi possível acessar a configuração de trackeamento.");
+      return payload;
+    };
+    const createField = (labelText, value, options = {}) => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "field";
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+      input.id = `tracking-${crypto.randomUUID()}`;
+      input.value = value || "";
+      input.type = options.type || "text";
+      input.name = options.name;
+      input.placeholder = options.placeholder || "";
+      input.required = options.required !== false;
+      input.maxLength = options.maxLength || 1000;
+      input.autocomplete = "off";
+      if (options.className) input.className = options.className;
+      label.htmlFor = input.id;
+      label.textContent = labelText;
+      wrapper.append(label, input);
+      return wrapper;
+    };
+    const collectPlatforms = () => Object.fromEntries(platforms.map((platform) => [platform, Array.from(document.querySelector(`#tracking-${platform}`).children)
+      .filter((row) => row.classList.contains("tracking-row"))
+      .map((row) => ({
+        id: row.dataset.id,
+        label: row.querySelector('[name="label"]').value,
+        destinationId: row.querySelector('[name="destinationId"]').value,
+        secret: row.querySelector('[name="secret"]').value,
+        secretConfigured: row.dataset.secretConfigured === "true",
+        enabled: row.querySelector('[name="enabled"]').checked
+      }))]));
+    const render = () => {
+      let total = 0;
+      platforms.forEach((platform) => {
+        const container = document.querySelector(`#tracking-${platform}`);
+        const entries = currentConfig.platforms?.[platform] || [];
+        total += entries.length;
+        container.replaceChildren();
+        if (!entries.length) {
+          const empty = document.createElement("p");
+          empty.className = "tracking-empty";
+          empty.textContent = `Nenhum destino da ${platformLabels[platform]} configurado.`;
+          container.append(empty);
+          return;
+        }
+        entries.forEach((entry) => {
+          const row = document.createElement("div");
+          row.className = "tracking-row";
+          row.dataset.id = entry.id || crypto.randomUUID();
+          row.dataset.secretConfigured = String(entry.secretConfigured === true);
+          const nameField = createField("Nome interno", entry.label, { name: "label", placeholder: `${platformLabels[platform]} principal`, maxLength: 60 });
+          const destinationField = createField(destinationLabels[platform], entry.destinationId, { name: "destinationId", placeholder: destinationPlaceholders[platform], maxLength: 40 });
+          const secretField = createField(secretLabels[platform], entry.secret, { name: "secret", type: "password", placeholder: entry.secretConfigured ? "Configurado — deixe vazio para manter" : "Credencial privada", required: !entry.secretConfigured, className: "tracking-secret" });
+          const actions = document.createElement("div");
+          actions.className = "tracking-row-actions";
+          const toggle = document.createElement("label");
+          toggle.className = "tracking-toggle";
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.name = "enabled";
+          checkbox.checked = entry.enabled !== false;
+          toggle.append(checkbox, document.createTextNode("Ativo"));
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "remove-button";
+          remove.setAttribute("aria-label", `Remover ${entry.label || "destino"} da ${platformLabels[platform]}`);
+          remove.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg>';
+          remove.addEventListener("click", () => {
+            currentConfig.platforms = collectPlatforms();
+            currentConfig.platforms[platform] = currentConfig.platforms[platform].filter((item) => item.id !== row.dataset.id);
+            render();
+          });
+          actions.append(toggle, remove);
+          row.append(nameField, destinationField, secretField, actions);
+          container.append(row);
+        });
+      });
+      totalLabel.textContent = `${total} ${total === 1 ? "configurado" : "configurados"}`;
+    };
+
+    document.querySelectorAll("[data-add-platform]").forEach((button) => button.addEventListener("click", () => {
+      currentConfig.platforms = collectPlatforms();
+      const platform = button.dataset.addPlatform;
+      if (currentConfig.platforms[platform].length >= 20) {
+        formMessage.textContent = "Cada plataforma aceita no máximo 20 destinos.";
+        formMessage.hidden = false;
+        return;
+      }
+      currentConfig.platforms[platform].push({ id: crypto.randomUUID(), label: "", destinationId: "", secret: "", secretConfigured: false, enabled: true });
+      render();
+      document.querySelector(`#tracking-${platform} .tracking-row:last-child input`)?.focus();
+    }));
+
+    try {
+      currentConfig = await configRequest();
+      render();
+    } catch (error) {
+      formMessage.textContent = error.message;
+      formMessage.hidden = false;
+      render();
+    }
+
+    trackingForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      formMessage.hidden = true;
+      if (!trackingForm.reportValidity()) return;
+      saveButton.disabled = true;
+      saveButton.textContent = "Salvando…";
+      try {
+        const saved = await configRequest({ method: "POST", body: JSON.stringify({ platforms: collectPlatforms() }) });
+        currentConfig = saved;
+        render();
+        trackingToast.hidden = false;
+        setTimeout(() => { trackingToast.hidden = true; }, 3200);
+      } catch (error) {
+        formMessage.textContent = error.message;
+        formMessage.hidden = false;
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "Salvar trackeamento";
+      }
+    });
+    return;
+  }
   if (page === "overview") return;
 
   try {

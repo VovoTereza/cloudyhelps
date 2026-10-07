@@ -1,4 +1,11 @@
 (() => {
+  const attribution = new URLSearchParams(window.location.search);
+  ["fbclid", "ttclid", "gclid"].forEach((key) => {
+    const value = attribution.get(key);
+    if (value && value.length <= 500) {
+      try { sessionStorage.setItem(`cloudy_${key}`, value); } catch {}
+    }
+  });
   const amountButtons = Array.from(document.querySelectorAll("button[aria-pressed]"));
   if (!amountButtons.length) return;
 

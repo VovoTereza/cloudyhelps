@@ -208,6 +208,8 @@ const handleCreateIntent = async (request: Request) => {
   const productName = String(body.productName || "").trim();
   const medicineSupport = body.medicineSupport === true;
   const marketingConsent = body.marketingConsent === true;
+  const submittedTracking = body.trackingContext && typeof body.trackingContext === "object" ? body.trackingContext : {};
+  const trackingContext = Object.fromEntries(["fbp", "fbc", "ttclid", "ttp", "gclid", "googleClientId", "userAgent", "pageUrl"].map((key) => [key, String(submittedTracking[key] || "").slice(0, key === "pageUrl" ? 1000 : 500)]));
   const email = String(body.email || "").trim().toLowerCase();
   const name = String(body.name || "").trim();
   const requestId = /^[0-9a-f-]{36}$/i.test(String(body.requestId || "")) ? body.requestId : crypto.randomUUID();
@@ -238,6 +240,7 @@ const handleCreateIntent = async (request: Request) => {
       amount,
       currency: "USD",
       marketing_consent: marketingConsent,
+      tracking_context: trackingContext,
       payment_intent_id: payment.paymentIntentId || null,
       created_at: new Date().toISOString()
     })
@@ -292,7 +295,7 @@ const findPaymentLead = async (transaction: Record<string, any>, grossAmount: nu
     ? `payment_intent_id=eq.${encodeURIComponent(paymentIntentId)}`
     : email ? `email=eq.${encodeURIComponent(email)}&amount=eq.${grossAmount}&currency=eq.${encodeURIComponent(currency)}` : "";
   if (!filter) return null;
-  const response = await fetch(`${supabaseUrl}/rest/v1/payment_leads?${filter}&select=email,donor_name,marketing_consent&order=created_at.desc&limit=1`, { headers: serviceHeaders });
+  const response = await fetch(`${supabaseUrl}/rest/v1/payment_leads?${filter}&select=email,donor_name,marketing_consent,tracking_context&order=created_at.desc&limit=1`, { headers: serviceHeaders });
   if (!response.ok) throw new Error("Não foi possível localizar os dados do doador.");
   return (await response.json())[0] || null;
 };
@@ -304,6 +307,121 @@ const patchEmailSequence = async (externalId: string, values: Record<string, unk
     body: JSON.stringify(values)
   });
   if (!response.ok) throw new Error("Não foi possível atualizar a sequência de e-mails.");
+};
+
+const sha256 = async (value: unknown) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(value || "").trim().toLowerCase())))).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+const withoutEmpty = (value: Record<string, unknown>) => Object.fromEntries(Object.entries(value).filter(([, item]) => item !== "" && item !== null && item !== undefined));
+const destinationId = (platform: string, entry: Record<string, any>) => platform === "meta" ? entry.pixelId : platform === "google" ? entry.measurementId : entry.pixelCode;
+
+const sendPaidConversion = async (platform: string, entry: Record<string, any>, conversion: Record<string, any>) => {
+  let response: Response;
+  if (platform === "meta") {
+    const userData = withoutEmpty({
+      em: [conversion.emailHash],
+      fn: conversion.firstNameHash ? [conversion.firstNameHash] : undefined,
+      ln: conversion.lastNameHash ? [conversion.lastNameHash] : undefined,
+      fbp: conversion.context.fbp,
+      fbc: conversion.context.fbc,
+      client_user_agent: conversion.context.userAgent
+    });
+    response = await fetch(`https://graph.facebook.com/v23.0/${encodeURIComponent(entry.pixelId)}/events`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${entry.accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ data: [{
+        event_name: "Purchase",
+        event_time: conversion.eventTime,
+        event_id: conversion.externalId,
+        action_source: "website",
+        event_source_url: conversion.context.pageUrl || campaignUrl,
+        user_data: userData,
+        custom_data: { currency: conversion.currency, value: conversion.value, content_name: "Donation to Jessica's campaign", content_type: "product", contents: [{ id: "donation", quantity: 1, item_price: conversion.value }] }
+      }] })
+    });
+  } else if (platform === "google") {
+    response = await fetch(`https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(entry.measurementId)}&api_secret=${encodeURIComponent(entry.apiSecret)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: conversion.context.googleClientId || `${conversion.eventTime}.${Math.abs(conversion.externalId.split("").reduce((sum: number, character: string) => sum + character.charCodeAt(0), 0))}`,
+        user_id: conversion.emailHash,
+        user_data: { sha256_email_address: conversion.emailHash },
+        timestamp_micros: conversion.eventTime * 1_000_000,
+        events: [{ name: "purchase", params: { transaction_id: conversion.externalId, currency: conversion.currency, value: conversion.value, items: [{ item_id: "donation", item_name: "Donation to Jessica's campaign", price: conversion.value, quantity: 1 }] } }]
+      })
+    });
+  } else {
+    response = await fetch("https://business-api.tiktok.com/open_api/v1.3/event/track/", {
+      method: "POST",
+      headers: { "Access-Token": entry.accessToken, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_source: "web",
+        event_source_id: entry.pixelCode,
+        data: [{
+          event: "Purchase",
+          event_time: conversion.eventTime,
+          event_id: conversion.externalId,
+          user: withoutEmpty({ email: conversion.emailHash, external_id: conversion.emailHash, ttp: conversion.context.ttp, ttclid: conversion.context.ttclid }),
+          page: { url: conversion.context.pageUrl || campaignUrl },
+          properties: { currency: conversion.currency, value: conversion.value, content_type: "product", contents: [{ content_id: "donation", content_name: "Donation to Jessica's campaign", quantity: 1, price: conversion.value }] }
+        }]
+      })
+    });
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || (platform === "tiktok" && Number(payload.code) !== 0) || (platform === "meta" && !Number(payload.events_received))) {
+    throw new Error(String(payload.error?.message || payload.message || `Falha HTTP ${response.status}`).slice(0, 500));
+  }
+};
+
+const recordTrackingDispatch = async (externalId: string, platform: string, entry: Record<string, any>, status: "sent" | "failed", error = "") => {
+  const id = String(destinationId(platform, entry));
+  const existingResponse = await fetch(`${supabaseUrl}/rest/v1/tracking_dispatches?external_id=eq.${encodeURIComponent(externalId)}&platform=eq.${platform}&destination_id=eq.${encodeURIComponent(id)}&select=attempts&limit=1`, { headers: serviceHeaders });
+  const existing = existingResponse.ok ? (await existingResponse.json())[0] : null;
+  const response = await fetch(`${supabaseUrl}/rest/v1/tracking_dispatches?on_conflict=external_id,platform,destination_id`, {
+    method: "POST",
+    headers: { ...serviceHeaders, Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify({ external_id: externalId, platform, destination_id: id, status, attempts: Number(existing?.attempts || 0) + 1, last_error: error || null, sent_at: status === "sent" ? new Date().toISOString() : null, updated_at: new Date().toISOString() })
+  });
+  if (!response.ok) throw new Error("Não foi possível registrar o envio da conversão.");
+};
+
+const processPaidTracking = async (transaction: Record<string, any>, externalId: string) => {
+  const config = await loadProviderConfig("tracking");
+  if (!config) return;
+  const grossAmount = Number(transaction.grossAmount);
+  const currency = String(transaction.currency || "USD").toUpperCase();
+  if (!Number.isInteger(grossAmount) || grossAmount <= 0 || !/^[A-Z]{3}$/.test(currency)) return;
+  const lead = await findPaymentLead(transaction, grossAmount, currency);
+  const email = String(lead?.email || transaction.customer?.email || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+  const fullName = String(lead?.donor_name || transaction.customer?.name || "").trim().split(/\s+/).filter(Boolean);
+  const conversion = {
+    externalId,
+    eventTime: Math.floor(Date.now() / 1000),
+    currency,
+    value: grossAmount / 100,
+    emailHash: await sha256(email),
+    firstNameHash: fullName[0] ? await sha256(fullName[0]) : "",
+    lastNameHash: fullName.length > 1 ? await sha256(fullName.at(-1)) : "",
+    context: lead?.tracking_context || {}
+  };
+  const failures: string[] = [];
+  for (const platform of ["meta", "google", "tiktok"]) {
+    for (const entry of (config[platform] || []).filter((item: Record<string, any>) => item.enabled !== false)) {
+      const id = String(destinationId(platform, entry));
+      const previousResponse = await fetch(`${supabaseUrl}/rest/v1/tracking_dispatches?external_id=eq.${encodeURIComponent(externalId)}&platform=eq.${platform}&destination_id=eq.${encodeURIComponent(id)}&status=eq.sent&select=status&limit=1`, { headers: serviceHeaders });
+      if (previousResponse.ok && (await previousResponse.json()).length) continue;
+      try {
+        await sendPaidConversion(platform, entry, conversion);
+        await recordTrackingDispatch(externalId, platform, entry, "sent");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Falha desconhecida.";
+        await recordTrackingDispatch(externalId, platform, entry, "failed", message).catch(() => {});
+        failures.push(`${platform}:${id}`);
+      }
+    }
+  }
+  if (failures.length) throw new Error(`Conversões pendentes: ${failures.join(", ")}`);
 };
 
 const processPaidDonorEmail = async (transaction: Record<string, any>, externalId: string) => {
@@ -398,7 +516,14 @@ const handleWebhook = async (request: Request) => {
     body: JSON.stringify({ external_id: externalId, event, status: transaction.status || null, gross_amount: Number.isFinite(Number(transaction.grossAmount)) ? Number(transaction.grossAmount) : null, currency: transaction.currency || null, payment_method: transaction.paymentMethod || null, customer_name: transaction.customer?.name || null, customer_email: transaction.customer?.email || null, payload, occurred_at: payload.timestamp || new Date().toISOString() })
   });
   if (!databaseResponse.ok) return json(request, { error: "Não foi possível registrar o evento." }, 500);
-  if (event === "transaction.paid") await processPaidDonorEmail(transaction, externalId);
+  if (event === "transaction.paid") {
+    const outcomes = await Promise.allSettled([
+      processPaidTracking(transaction, externalId),
+      processPaidDonorEmail(transaction, externalId)
+    ]);
+    const failure = outcomes.find((outcome) => outcome.status === "rejected");
+    if (failure?.status === "rejected") throw failure.reason;
+  }
   return new Response(null, { status: 204, headers: corsHeaders(request) });
 };
 

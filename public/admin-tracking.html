@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow">
+  <title>Trackeamento | Cloudy Impact</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/admin.css">
+</head>
+<body class="admin-page auth-pending" data-admin-page="tracking">
+  <header class="mobile-header"><a class="brand" href="/"><span class="brand-mark" aria-hidden="true">C</span><span>Cloudy <strong>Impact</strong></span></a><button class="icon-button" id="menu-button" type="button" aria-label="Abrir navegação" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></header>
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">C</span><span>Cloudy <strong>Impact</strong></span></a><div class="workspace-label"><span>Área da campanha</span><strong>Campanha da Jessica</strong></div>
+    <nav aria-label="Navegação administrativa">
+      <a href="/admin.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Visão geral</a><a href="/admin-campaign.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v7"/><circle cx="12" cy="5" r="3"/></svg>Campanha</a><a href="/admin-donations.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>Níveis de doação</a><a href="/admin-content.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v14H7l-3 3V4Z"/><path d="M8 9h8M8 13h5"/></svg>Perguntas e mensagens</a><a href="/admin-gateway.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></svg>Gateway</a><a href="/admin-apis.html" class="nav-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9 4 12l4 3M16 9l4 3-4 3M14 5l-4 14"/></svg>API's</a><a href="/admin-tracking.html" class="nav-link is-active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M22 12h-3M12 22v-3M2 12h3"/></svg>Trackeamento</a>
+    </nav>
+    <div class="sidebar-footer"><a class="secondary-button secondary-button--full" href="/" target="_blank" rel="noopener">Ver campanha</a><button class="text-button" id="logout-button" type="button">Sair</button></div>
+  </aside><button class="sidebar-backdrop" id="sidebar-backdrop" aria-label="Fechar navegação" hidden></button>
+  <main class="admin-main">
+    <div class="admin-topbar"><div><p class="eyebrow">Conversões confirmadas</p><h1>Trackeamento</h1></div></div>
+    <div class="prototype-banner" role="note"><span class="status-dot"></span><div><strong>Somente pagamentos aprovados</strong><span>Os eventos são enviados pelo servidor apenas após a confirmação do gateway. Visitas e tentativas não são contabilizadas.</span></div></div>
+    <div class="data-error" id="data-error" role="alert" hidden></div>
+    <form id="tracking-form" class="admin-section" aria-labelledby="tracking-title">
+      <div class="section-heading"><div><p class="eyebrow">Destinos</p><h2 id="tracking-title">Pixels e tags</h2></div><span class="gateway-badge" id="tracking-total">0 configurados</span></div>
+      <section class="panel tracking-platform" aria-labelledby="meta-title">
+        <div class="panel-title"><div><h3 id="meta-title">Meta</h3><p>Conversions API · evento Purchase</p></div><button class="secondary-button tracking-add" type="button" data-add-platform="meta">Adicionar pixel</button></div>
+        <div class="tracking-list" id="tracking-meta" data-platform="meta"></div>
+      </section>
+      <section class="panel tracking-platform" aria-labelledby="google-title">
+        <div class="panel-title"><div><h3 id="google-title">Google Analytics</h3><p>Measurement Protocol GA4 · evento purchase</p></div><button class="secondary-button tracking-add" type="button" data-add-platform="google">Adicionar tag</button></div>
+        <div class="tracking-list" id="tracking-google" data-platform="google"></div>
+      </section>
+      <section class="panel tracking-platform" aria-labelledby="tiktok-title">
+        <div class="panel-title"><div><h3 id="tiktok-title">TikTok</h3><p>Events API · evento Purchase</p></div><button class="secondary-button tracking-add" type="button" data-add-platform="tiktok">Adicionar pixel</button></div>
+        <div class="tracking-list" id="tracking-tiktok" data-platform="tiktok"></div>
+      </section>
+      <div class="form-footer tracking-footer"><p class="form-message" id="tracking-form-message" role="alert" hidden></p><button class="primary-button" id="save-tracking" type="submit">Salvar trackeamento</button></div>
+    </form>
+  </main>
+  <div class="toast" id="tracking-toast" role="status" aria-live="polite" hidden>Trackeamento salvo com sucesso.</div>
+  <script src="/supabase-config.js"></script><script src="/supabase-client.js"></script><script src="/admin.js"></script>
+</body></html>

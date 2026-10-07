@@ -1,4 +1,40 @@
 (() => {
+  const query = new URLSearchParams(window.location.search);
+  ["fbclid", "ttclid", "gclid"].forEach((key) => {
+    const value = query.get(key);
+    if (value && value.length <= 500) {
+      try { sessionStorage.setItem(`cloudy_${key}`, value); } catch {}
+    }
+  });
+  const cookieValue = (name) => document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1) || "";
+  const storedAttribution = (key) => {
+    try { return sessionStorage.getItem(`cloudy_${key}`) || ""; } catch { return ""; }
+  };
+  const googleClientId = () => {
+    const cookie = decodeURIComponent(cookieValue("_ga"));
+    const parts = cookie.split(".");
+    if (parts.length >= 4) return `${parts.at(-2)}.${parts.at(-1)}`;
+    try {
+      const existing = localStorage.getItem("cloudy_ga_client_id");
+      if (existing) return existing;
+      const generated = `${Date.now()}.${Math.floor(Math.random() * 1_000_000_000)}`;
+      localStorage.setItem("cloudy_ga_client_id", generated);
+      return generated;
+    } catch { return `${Date.now()}.${Math.floor(Math.random() * 1_000_000_000)}`; }
+  };
+  const trackingContext = () => {
+    const fbclid = storedAttribution("fbclid");
+    return {
+      fbp: decodeURIComponent(cookieValue("_fbp")).slice(0, 250),
+      fbc: (decodeURIComponent(cookieValue("_fbc")) || (fbclid ? `fb.1.${Date.now()}.${fbclid}` : "")).slice(0, 500),
+      ttclid: storedAttribution("ttclid").slice(0, 500),
+      ttp: decodeURIComponent(cookieValue("_ttp")).slice(0, 250),
+      gclid: storedAttribution("gclid").slice(0, 500),
+      googleClientId: googleClientId().slice(0, 120),
+      userAgent: navigator.userAgent.slice(0, 500),
+      pageUrl: window.location.href.slice(0, 1000)
+    };
+  };
   const validAmount = (value) => Number.isFinite(value) && value > 0 && value <= 100000;
   const params = new URLSearchParams(window.location.search);
   let amount = Number(params.get("amount"));
@@ -77,6 +113,7 @@
             email: document.querySelector("#email").value.trim(),
             name: `${document.querySelector("#first-name").value.trim()} ${document.querySelector("#last-name").value.trim()}`.trim(),
             marketingConsent: document.querySelector('input[name="updates"]')?.checked === true,
+            trackingContext: trackingContext(),
             requestId
           })
         });
