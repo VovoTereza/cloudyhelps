@@ -3,10 +3,12 @@
   const params = new URLSearchParams(window.location.search);
   let amount = Number(params.get("amount"));
   let medicineSupport = params.get("medicine") === "1";
+  let productName = String(params.get("product") || "").trim();
 
   try {
     if (!validAmount(amount)) amount = Number(sessionStorage.getItem("cloudyDonationAmount"));
     if (!params.has("medicine")) medicineSupport = sessionStorage.getItem("cloudyMedicineSupport") === "true";
+    if (!productName) productName = String(sessionStorage.getItem("cloudyDonationProduct") || "").trim();
   } catch {}
   if (!validAmount(amount)) amount = 50;
 
@@ -76,6 +78,9 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             amount: Math.round(total * 100),
+            baseAmount: Math.round(amount * 100),
+            productName,
+            medicineSupport,
             email: document.querySelector("#email").value.trim(),
             name: `${document.querySelector("#first-name").value.trim()} ${document.querySelector("#last-name").value.trim()}`.trim(),
             requestId

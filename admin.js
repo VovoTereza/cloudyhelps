@@ -48,6 +48,8 @@
     const status = document.querySelector("#gateway-status");
     const statusText = document.querySelector("#gateway-status-text");
     const webhookState = document.querySelector("#gateway-webhook-state");
+    const productsState = document.querySelector("#gateway-products-state");
+    const productSyncNote = document.querySelector("#product-sync-note");
     const note = document.querySelector("#gateway-note");
     const gatewayForm = document.querySelector("#gateway-form");
     const formMessage = document.querySelector("#gateway-form-message");
@@ -59,17 +61,23 @@
       status.classList.toggle("is-ready", gateway.configured);
       status.classList.toggle("is-pending", !gateway.configured);
       statusText.textContent = gateway.configured ? "Pronto para pagamentos" : "Aguardando credenciais";
-      webhookState.textContent = gateway.webhookConfigured ? "Assinatura configurada" : "Aguardando segredo";
+      webhookState.textContent = gateway.webhookConfigured ? "Configurado automaticamente" : "Aguardando configuração";
+      const productSync = gateway.productSync || { linked: 0, total: 0, missing: [] };
+      productsState.textContent = productSync.total ? `${productSync.linked} de ${productSync.total} vinculados` : "Aguardando sincronização";
       document.querySelector("#gateway-environment").textContent = gateway.environment === "live" ? "Produção" : gateway.environment === "test" ? "Teste" : "Não configurado";
       note.textContent = gateway.configured
         ? "A integração está ativa. O checkout cria pagamentos pelo backend seguro da Vercel."
         : "Cadastre as credenciais abaixo para ativar os pagamentos no checkout.";
       document.querySelector("#naut-public-key").value = gateway.publicKey || "";
-      document.querySelector("#naut-product-id").value = gateway.productId || "";
       document.querySelector("#naut-secret-key").placeholder = gateway.secretKeyConfigured ? "Configurada — deixe em branco para manter" : "sk_live_…";
-      document.querySelector("#naut-webhook-secret").placeholder = gateway.webhookSecretConfigured ? "Configurado — deixe em branco para manter" : "Segredo de assinatura";
       if (gateway.secretKeyConfigured) document.querySelector("#secret-key-help").textContent = "Chave configurada. Preencha somente para substituí-la.";
-      if (gateway.webhookSecretConfigured) document.querySelector("#webhook-secret-help").textContent = "Segredo configurado. Preencha somente para substituí-lo.";
+      productSyncNote.classList.toggle("is-complete", productSync.total > 0 && productSync.linked === productSync.total);
+      productSyncNote.classList.toggle("is-warning", productSync.missing?.length > 0);
+      productSyncNote.textContent = productSync.missing?.length
+        ? `Crie ou publique na Navenaut os produtos que faltam: ${productSync.missing.join(", ")}. Depois salve as chaves novamente para sincronizar.`
+        : productSync.total
+          ? "Todos os níveis de doação estão vinculados a produtos publicados da Navenaut."
+          : "Ao salvar, os níveis de doação serão vinculados aos produtos publicados da Navenaut.";
     };
 
     const configRequest = async (options = {}) => {
@@ -109,13 +117,10 @@
           method: "POST",
           body: JSON.stringify({
             publicKey: values.get("publicKey"),
-            secretKey: values.get("secretKey"),
-            webhookSecret: values.get("webhookSecret"),
-            productId: values.get("productId")
+            secretKey: values.get("secretKey")
           })
         });
         document.querySelector("#naut-secret-key").value = "";
-        document.querySelector("#naut-webhook-secret").value = "";
         renderGateway(currentConfig);
         gatewayToast.hidden = false;
         setTimeout(() => { gatewayToast.hidden = true; }, 3200);

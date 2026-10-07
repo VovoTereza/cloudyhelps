@@ -26,18 +26,18 @@
           <div><span>Fluxo</span><strong>Payment Element</strong></div>
           <div><span>Moeda</span><strong>USD</strong></div>
           <div><span>Webhook</span><strong id="gateway-webhook-state">Verificando…</strong></div>
+          <div><span>Produtos</span><strong id="gateway-products-state">Verificando…</strong></div>
         </div>
         <div class="gateway-note" id="gateway-note">As chaves ficam protegidas no backend da Vercel e nunca são enviadas ao navegador.</div>
       </div>
       <div class="panel content-block">
-        <div class="panel-title"><div><h3>Credenciais da Navenaut</h3><p>Cadastre as chaves aqui. Os segredos são criptografados e usados somente pelo backend.</p></div><span class="secure-label">Armazenamento seguro</span></div>
+        <div class="panel-title"><div><h3>Credenciais da Navenaut</h3><p>Informe somente as chaves da API. Produtos e webhook são sincronizados automaticamente.</p></div><span class="secure-label">Armazenamento seguro</span></div>
         <form id="gateway-form" autocomplete="off">
           <div class="form-grid gateway-form-grid">
-            <div class="field field--wide"><label for="naut-public-key">Chave pública</label><input id="naut-public-key" name="publicKey" type="text" inputmode="text" spellcheck="false" placeholder="pk_live_…" required><span class="field-help">Disponível no painel da Navenaut em Credenciais da API.</span></div>
-            <div class="field"><label for="naut-secret-key">Chave secreta</label><input id="naut-secret-key" name="secretKey" type="password" spellcheck="false" placeholder="sk_live_…"><span class="field-help" id="secret-key-help">Nunca será exibida novamente após salvar.</span></div>
-            <div class="field"><label for="naut-webhook-secret">Segredo do webhook</label><input id="naut-webhook-secret" name="webhookSecret" type="password" spellcheck="false" placeholder="Segredo de assinatura"><span class="field-help" id="webhook-secret-help">Usado para validar eventos enviados pela Navenaut.</span></div>
-            <div class="field field--wide"><label for="naut-product-id">ID do produto <span class="optional-label">Opcional</span></label><input id="naut-product-id" name="productId" type="text" spellcheck="false" placeholder="Informe apenas se sua conta exigir um produto específico"></div>
+            <div class="field"><label for="naut-public-key">Chave pública</label><input id="naut-public-key" name="publicKey" type="text" inputmode="text" spellcheck="false" placeholder="pk_live_…" required><span class="field-help">Disponível no painel da Navenaut em Credenciais da API.</span></div>
+            <div class="field"><label for="naut-secret-key">Chave privada</label><input id="naut-secret-key" name="secretKey" type="password" spellcheck="false" placeholder="sk_live_…"><span class="field-help" id="secret-key-help">Nunca será exibida novamente após salvar.</span></div>
           </div>
+          <div class="product-sync-note" id="product-sync-note" role="status">Ao salvar, os níveis de doação serão vinculados aos produtos publicados da Navenaut.</div>
           <div class="gateway-form-footer"><p class="form-message" id="gateway-form-message" role="alert" hidden></p><button class="primary-button" id="save-gateway" type="submit">Salvar credenciais</button></div>
         </form>
       </div>

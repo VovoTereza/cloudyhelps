@@ -56,6 +56,7 @@
   tierButtons.forEach((button, index) => {
     const tier = data.tiers[index];
     if (!tier) return;
+    button.dataset.productName = tier.title;
     const leaves = leafElements(button);
     const amount = leaves.find((element) => /^\$[\d,.]+$/.test(element.textContent.trim()));
     const detail = button.querySelector("div.grid");

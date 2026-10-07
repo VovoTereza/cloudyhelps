@@ -277,6 +277,7 @@
   tierButtons.forEach((button, index) => {
     const tier = data.tiers[index];
     if (!tier) return;
+    button.dataset.productName = tier.title;
     const leaves = leafElements(button);
     const amount = leaves.find((element) => /^\$[\d,.]+$/.test(element.textContent.trim()));
     const detail = button.querySelector("div.grid");
@@ -362,6 +363,7 @@
   const selectedIconAtLoad = selectedAtLoad?.querySelector("div.flex > span.relative");
   const checkTemplate = selectedIconAtLoad?.querySelector(":scope > span.absolute")?.cloneNode(true);
   let selectedAmount = amountFrom(selectedAtLoad || amountButtons[0]);
+  let selectedProduct = (selectedAtLoad || amountButtons[0])?.dataset.productName || "Donation";
   let hasAddOn = addOn?.getAttribute("aria-checked") === "true";
 
   const liveRegion = document.createElement("span");
@@ -392,6 +394,7 @@
     const totalUrl = new URL("/checkout.html", window.location.origin);
     totalUrl.searchParams.set("amount", String(selectedAmount));
     totalUrl.searchParams.set("medicine", hasAddOn ? "1" : "0");
+    totalUrl.searchParams.set("product", selectedProduct);
     window.location.href = totalUrl.toString();
   });
 
@@ -429,8 +432,13 @@
   const selectAmount = (amount, announce = true) => {
     if (!buttonsByAmount.has(amount)) return;
     selectedAmount = amount;
-    amountButtons.forEach((button) => renderAmountButton(button, amountFrom(button) === amount));
-    try { sessionStorage.setItem("cloudyDonationAmount", String(amount)); } catch {}
+    const selectedButton = buttonsByAmount.get(amount);
+    selectedProduct = selectedButton?.dataset.productName || "Donation";
+    amountButtons.forEach((button) => renderAmountButton(button, button === selectedButton));
+    try {
+      sessionStorage.setItem("cloudyDonationAmount", String(amount));
+      sessionStorage.setItem("cloudyDonationProduct", selectedProduct);
+    } catch {}
     updateTotal(announce);
   };
 
