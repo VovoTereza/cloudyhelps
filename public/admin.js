@@ -74,10 +74,10 @@
       productSyncNote.classList.toggle("is-complete", productSync.total > 0 && productSync.linked === productSync.total);
       productSyncNote.classList.toggle("is-warning", productSync.missing?.length > 0);
       productSyncNote.textContent = productSync.missing?.length
-        ? `Crie ou publique na Navenaut os produtos que faltam: ${productSync.missing.join(", ")}. Depois salve as chaves novamente para sincronizar.`
+        ? `Cobranças por valor estão liberadas. Para também registrar o productId na Navenaut, publique estes produtos: ${productSync.missing.join(", ")}.`
         : productSync.total
           ? "Todos os níveis de doação estão vinculados a produtos publicados da Navenaut."
-          : "Ao salvar, os níveis de doação serão vinculados aos produtos publicados da Navenaut.";
+          : "Os produtos são vinculados automaticamente quando existirem, sem bloquear cobranças por valor.";
     };
 
     const configRequest = async (options = {}) => {

@@ -72,7 +72,7 @@ const loadConfig = async () => {
   return rows[0]?.encrypted_config ? await decrypt(rows[0].encrypted_config) : null;
 };
 const summary = (config: Record<string, any> | null) => ({
-  configured: Boolean(config?.publicKey && config?.secretKey && config?.webhookSecret && config?.productSync?.total > 0 && config.productSync.linked === config.productSync.total),
+  configured: Boolean(config?.publicKey && config?.secretKey && config?.webhookSecret),
   webhookConfigured: Boolean(config?.webhookSecret),
   environment: config?.publicKey?.startsWith("pk_live_") ? "live" : config?.publicKey?.startsWith("pk_test_") ? "test" : "unconfigured",
   publicKey: config?.publicKey || "",
@@ -106,7 +106,12 @@ const syncProducts = async (config: Record<string, any>) => {
     fetch(productsApi, { headers: nautHeaders(config) })
   ]);
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok || payload.success === false) throw new Error(payload.error?.message || "As chaves não possuem acesso para listar produtos da Navenaut.");
+  if (!response.ok || payload.success === false) {
+    return {
+      mappings: [],
+      productSync: { linked: 0, total: tiers.length, missing: tiers.map((tier: Record<string, any>) => `${tier.title} ($${tier.amount})`) }
+    };
+  }
   const products = payload.data?.items || payload.items || [];
   const mappings = tiers.map((tier: Record<string, any>) => {
     const amount = Math.round(Number(tier.amount) * 100);
@@ -210,8 +215,8 @@ const handleCreateIntent = async (request: Request) => {
 
   const candidates = (config.productMappings || []).filter((mapping: Record<string, any>) => Number(mapping.amount) === baseAmount);
   const product = candidates.find((mapping: Record<string, any>) => normalizeName(mapping.title) === normalizeName(productName)) || candidates[0];
-  if (!product?.productId) return json(request, { error: "Esta opção ainda não está vinculada a um produto publicado da Navenaut." }, 422);
-  const payload: Record<string, unknown> = { amount, currency: "USD", customerData: { email, name }, productId: product.productId, requestId };
+  const payload: Record<string, unknown> = { amount, currency: "USD", customerData: { email, name }, requestId };
+  if (product?.productId) payload.productId = product.productId;
   const gatewayResponse = await fetch(navenautApi, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Public-Key": config.publicKey, "X-Secret-Key": config.secretKey, "X-Request-Id": requestId, "Idempotency-Key": requestId },

@@ -27,6 +27,8 @@
   const requestId = crypto.randomUUID();
   let stripe = null;
   let elements = null;
+  let initialization = null;
+  let initializationTimer = null;
   const fields = [
     { input: document.querySelector("#email"), error: document.querySelector("#email-error"), message: "Enter a valid email address." },
     { input: document.querySelector("#first-name"), error: document.querySelector("#first-name-error"), message: "Enter your first name." },
@@ -55,23 +57,15 @@
     message.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
   };
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    message.hidden = true;
-    const fieldsValid = fields.map(validateField).every(Boolean);
-    const terms = document.querySelector("#terms");
-    const termsError = document.querySelector("#terms-error");
-    termsError.textContent = terms.checked ? "" : "Confirm that you understand this is a donation.";
+  const identityIsReady = () => fields.slice(0, 3).every(({ input }) => input.checkValidity() && input.value.trim());
+  const ensurePaymentElement = async (showFeedback = false) => {
+    if (elements) return true;
+    if (!identityIsReady()) return false;
+    if (initialization) return initialization;
 
-    if (!fieldsValid || !terms.checked) {
-      const firstInvalid = form.querySelector('[aria-invalid="true"], #terms:not(:checked)');
-      firstInvalid?.focus();
-      return;
-    }
-
-    submitButton.disabled = true;
-    if (!elements) {
-      submitLabel.textContent = "Connecting securely…";
+    initialization = (async () => {
+      paymentElement.setAttribute("aria-busy", "true");
+      if (showFeedback) submitLabel.textContent = "Connecting securely…";
       try {
         const response = await fetch("/api/navenaut/create-intent", {
           method: "POST",
@@ -96,13 +90,44 @@
         paymentElement.classList.add("is-connected");
         elements.create("payment").mount(paymentElement);
         submitLabel.textContent = "Confirm donation";
-        showMessage("The secure card form is ready. Review the payment details and confirm your donation.");
+        if (showFeedback) showMessage("Complete the secure card fields, then confirm your donation.");
+        return true;
       } catch (error) {
         submitLabel.textContent = "Continue securely";
-        showMessage(error.message || "Unable to connect to Navenaut. Please try again.");
+        if (showFeedback) showMessage(error.message || "Unable to connect to Navenaut. Please try again.");
+        return false;
       } finally {
-        submitButton.disabled = false;
+        paymentElement.removeAttribute("aria-busy");
+        initialization = null;
       }
+    })();
+    return initialization;
+  };
+
+  fields.slice(0, 3).forEach(({ input }) => input.addEventListener("input", () => {
+    clearTimeout(initializationTimer);
+    initializationTimer = setTimeout(() => { ensurePaymentElement(false); }, 700);
+  }));
+  setTimeout(() => { ensurePaymentElement(false); }, 900);
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    message.hidden = true;
+    const fieldsValid = fields.map(validateField).every(Boolean);
+    const terms = document.querySelector("#terms");
+    const termsError = document.querySelector("#terms-error");
+    termsError.textContent = terms.checked ? "" : "Confirm that you understand this is a donation.";
+
+    if (!fieldsValid || !terms.checked) {
+      const firstInvalid = form.querySelector('[aria-invalid="true"], #terms:not(:checked)');
+      firstInvalid?.focus();
+      return;
+    }
+
+    submitButton.disabled = true;
+    if (!elements) {
+      await ensurePaymentElement(true);
+      submitButton.disabled = false;
       return;
     }
 
