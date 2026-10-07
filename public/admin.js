@@ -144,6 +144,73 @@
     });
     return;
   }
+  if (page === "apis") {
+    const status = document.querySelector("#resend-status");
+    const statusText = document.querySelector("#resend-status-text");
+    const domain = document.querySelector("#resend-domain");
+    const from = document.querySelector("#resend-from");
+    const apiKey = document.querySelector("#resend-api-key");
+    const keyHelp = document.querySelector("#resend-key-help");
+    const resendForm = document.querySelector("#resend-form");
+    const formMessage = document.querySelector("#resend-form-message");
+    const saveButton = document.querySelector("#save-resend");
+    const resendToast = document.querySelector("#resend-toast");
+
+    const configRequest = async (options = {}) => {
+      const response = await fetch("/api/resend/config", {
+        ...options,
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          ...(options.body ? { "Content-Type": "application/json" } : {}),
+          ...options.headers
+        }
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Não foi possível acessar a configuração da Resend.");
+      return payload;
+    };
+    const render = (config) => {
+      status.classList.toggle("is-ready", config.configured);
+      status.classList.toggle("is-pending", !config.configured);
+      statusText.textContent = config.configured ? "Pronta para envios" : "Aguardando chave";
+      domain.textContent = config.domain || "Não configurado";
+      from.textContent = config.from || "Não configurado";
+      apiKey.placeholder = config.apiKeyConfigured ? "Configurada — deixe em branco para manter" : "re_…";
+      if (config.apiKeyConfigured) keyHelp.textContent = "Chave configurada. Preencha somente para substituí-la.";
+    };
+
+    try { render(await configRequest()); }
+    catch (error) {
+      status.classList.add("is-pending");
+      statusText.textContent = "Não foi possível verificar";
+      domain.textContent = "Indisponível";
+      from.textContent = "Indisponível";
+      formMessage.textContent = error.message;
+      formMessage.hidden = false;
+    }
+
+    resendForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      formMessage.hidden = true;
+      saveButton.disabled = true;
+      saveButton.textContent = "Validando…";
+      try {
+        const config = await configRequest({ method: "POST", body: JSON.stringify({ apiKey: apiKey.value }) });
+        apiKey.value = "";
+        render(config);
+        resendToast.hidden = false;
+        setTimeout(() => { resendToast.hidden = true; }, 3200);
+      } catch (error) {
+        formMessage.textContent = error.message;
+        formMessage.hidden = false;
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "Salvar e validar";
+      }
+    });
+    return;
+  }
   if (page === "overview") return;
 
   try {

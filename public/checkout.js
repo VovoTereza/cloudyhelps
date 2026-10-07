@@ -76,6 +76,7 @@
             medicineSupport,
             email: document.querySelector("#email").value.trim(),
             name: `${document.querySelector("#first-name").value.trim()} ${document.querySelector("#last-name").value.trim()}`.trim(),
+            marketingConsent: document.querySelector('input[name="updates"]')?.checked === true,
             requestId
           })
         });

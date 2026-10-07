@@ -65,12 +65,13 @@ const decrypt = async (value: string) => {
 };
 
 const serviceHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" };
-const loadConfig = async () => {
-  const response = await fetch(`${supabaseUrl}/rest/v1/gateway_credentials?provider=eq.${provider}&select=encrypted_config&limit=1`, { headers: serviceHeaders });
-  if (!response.ok) throw new Error("Não foi possível carregar as credenciais do gateway.");
+const loadProviderConfig = async (providerName: string) => {
+  const response = await fetch(`${supabaseUrl}/rest/v1/gateway_credentials?provider=eq.${encodeURIComponent(providerName)}&select=encrypted_config&limit=1`, { headers: serviceHeaders });
+  if (!response.ok) throw new Error("Não foi possível carregar as credenciais do provedor.");
   const rows = await response.json();
   return rows[0]?.encrypted_config ? await decrypt(rows[0].encrypted_config) : null;
 };
+const loadConfig = () => loadProviderConfig(provider);
 const summary = (config: Record<string, any> | null) => ({
   configured: Boolean(config?.publicKey && config?.secretKey && config?.webhookSecret),
   webhookConfigured: Boolean(config?.webhookSecret),
@@ -206,6 +207,7 @@ const handleCreateIntent = async (request: Request) => {
   const baseAmount = Number(body.baseAmount);
   const productName = String(body.productName || "").trim();
   const medicineSupport = body.medicineSupport === true;
+  const marketingConsent = body.marketingConsent === true;
   const email = String(body.email || "").trim().toLowerCase();
   const name = String(body.name || "").trim();
   const requestId = /^[0-9a-f-]{36}$/i.test(String(body.requestId || "")) ? body.requestId : crypto.randomUUID();
@@ -226,6 +228,21 @@ const handleCreateIntent = async (request: Request) => {
   if (!gatewayResponse.ok || gatewayPayload.success === false) return json(request, { error: gatewayPayload.error?.message || "Não foi possível iniciar o pagamento." }, gatewayResponse.status >= 400 && gatewayResponse.status < 500 ? 422 : 502);
   const payment = gatewayPayload.data || gatewayPayload;
   if (!payment.clientSecret || !payment.publishableKey) return json(request, { error: "A Navenaut não retornou os dados necessários para o pagamento." }, 502);
+  const leadResponse = await fetch(`${supabaseUrl}/rest/v1/payment_leads?on_conflict=request_id`, {
+    method: "POST",
+    headers: { ...serviceHeaders, Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify({
+      request_id: requestId,
+      email,
+      donor_name: name,
+      amount,
+      currency: "USD",
+      marketing_consent: marketingConsent,
+      payment_intent_id: payment.paymentIntentId || null,
+      created_at: new Date().toISOString()
+    })
+  });
+  if (!leadResponse.ok) return json(request, { error: "Não foi possível vincular os dados do doador ao pagamento." }, 503);
   return json(request, { clientSecret: payment.clientSecret, publishableKey: payment.publishableKey, paymentIntentId: payment.paymentIntentId || null });
 };
 
@@ -236,6 +253,134 @@ const signatureIsValid = async (rawBody: string, signature: string, secret: stri
   const received = Uint8Array.from(signature.match(/.{2}/g) || [], (value) => Number.parseInt(value, 16));
   if (expected.length !== received.length) return false;
   return expected.every((value, index) => value === received[index]);
+};
+
+const campaignUrl = "https://cloudyhelps.vercel.app/";
+const followUpTemplates = [
+  { day: 3, subject: "Your kindness is already part of Jessica's story", copy: "Your earlier gift showed Jessica's family they are not facing this alone. Treatment brings ongoing costs for scans, medication, travel, and daily care. If you feel able to help again, another contribution can extend that support. There is no pressure—your first gift already mattered." },
+  { day: 4, subject: "One more step can make a real difference", copy: "Serious illness is not a single-day challenge. Each appointment and stage of care can bring new expenses. If your circumstances allow, another gift can help Jessica's family keep moving forward with more support." },
+  { day: 5, subject: "Why continued support matters", copy: "Ongoing treatment often means repeated appointments, prescriptions, transportation, and everyday needs. Your support helps the family face those demands. A second contribution, of any size, can keep that circle of care strong." },
+  { day: 6, subject: "You helped create breathing room", copy: "Your donation helped create a little more room for Jessica's family to focus on care rather than costs. If you would like to build on that kindness, you can support the campaign again today." },
+  { day: 7, subject: "A week of hope, made possible by people like you", copy: "A week has passed since your generous support. Compassion from people like you helps Jessica's family feel surrounded by a community that cares. If you can, one more gift can continue that encouragement." },
+  { day: 8, subject: "Help keep Jessica surrounded by care", copy: "Support can mean a ride to treatment, a prescription covered, or one less bill competing for attention. Your first gift was meaningful. Another contribution can help sustain that care." },
+  { day: 9, subject: "Your support reaches beyond one treatment", copy: "Cancer care affects every part of daily life. Donations can help ease treatment-related and household pressures while Jessica and her family navigate this difficult season. If you are able, please consider helping again." },
+  { day: 10, subject: "If you can, stand with Jessica once more", copy: "Your first donation was an act of real compassion. If you are in a position to give again, another gift can help the family meet the continuing needs that come with treatment." },
+  { day: 11, subject: "Together, small acts become lasting support", copy: "No single donor has to carry the whole burden. When caring people come together, each act of generosity becomes part of something larger. If it feels right for you, you can add another gift today." },
+  { day: 12, subject: "One final note of gratitude", copy: "Thank you again for standing with Jessica. This is the final reminder in this series. If you would like to make one more gift, your continued support will be received with deep gratitude." }
+];
+const escapeHtml = (value: unknown) => String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character] || character));
+const firstName = (value: unknown) => String(value || "Friend").trim().split(/\s+/)[0] || "Friend";
+const formatMoney = (amount: number, currency: string) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount / 100);
+const emailHtml = (name: string, copy: string, buttonLabel: string, unsubscribeUrl = "") => `<!doctype html><html lang="en"><body style="margin:0;background:#f3f7f9;font-family:Arial,sans-serif;color:#102038"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f7f9;padding:32px 16px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#fff;border:1px solid #dce6eb;border-radius:20px;overflow:hidden"><tr><td style="padding:36px"><p style="margin:0 0 24px;color:#0787bb;font-weight:700">Cloudy Impact</p><h1 style="margin:0 0 18px;font-size:28px;line-height:1.2">Hi ${escapeHtml(name)},</h1><p style="margin:0 0 26px;font-size:17px;line-height:1.65;color:#44536a">${escapeHtml(copy)}</p><a href="${campaignUrl}" style="display:inline-block;background:#078fc5;color:#fff;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:999px">${escapeHtml(buttonLabel)}</a>${unsubscribeUrl ? `<p style="margin:30px 0 0;font-size:12px;line-height:1.5;color:#788497">You are receiving this message because you chose to receive campaign updates. <a href="${escapeHtml(unsubscribeUrl)}" style="color:#59687d">Unsubscribe from future reminders</a>.</p>` : ""}</td></tr></table></td></tr></table></body></html>`;
+const emailText = (name: string, copy: string, buttonLabel: string, unsubscribeUrl = "") => `Hi ${name},\n\n${copy}\n\n${buttonLabel}: ${campaignUrl}${unsubscribeUrl ? `\n\nUnsubscribe from future reminders: ${unsubscribeUrl}` : ""}`;
+
+const sendResendEmail = async (config: Record<string, any>, payload: Record<string, unknown>, idempotencyKey: string) => {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ from: config.from, ...payload })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result.id) throw new Error(result.message || "Não foi possível enviar o e-mail pela Resend.");
+  return String(result.id);
+};
+
+const findPaymentLead = async (transaction: Record<string, any>, grossAmount: number, currency: string) => {
+  const email = String(transaction.customer?.email || "").trim().toLowerCase();
+  const paymentIntentId = String(transaction.paymentIntentId || transaction.payment_intent_id || "").trim();
+  const filter = paymentIntentId
+    ? `payment_intent_id=eq.${encodeURIComponent(paymentIntentId)}`
+    : email ? `email=eq.${encodeURIComponent(email)}&amount=eq.${grossAmount}&currency=eq.${encodeURIComponent(currency)}` : "";
+  if (!filter) return null;
+  const response = await fetch(`${supabaseUrl}/rest/v1/payment_leads?${filter}&select=email,donor_name,marketing_consent&order=created_at.desc&limit=1`, { headers: serviceHeaders });
+  if (!response.ok) throw new Error("Não foi possível localizar os dados do doador.");
+  return (await response.json())[0] || null;
+};
+
+const patchEmailSequence = async (externalId: string, values: Record<string, unknown>) => {
+  const response = await fetch(`${supabaseUrl}/rest/v1/donor_email_sequences?external_id=eq.${encodeURIComponent(externalId)}`, {
+    method: "PATCH",
+    headers: { ...serviceHeaders, Prefer: "return=minimal" },
+    body: JSON.stringify(values)
+  });
+  if (!response.ok) throw new Error("Não foi possível atualizar a sequência de e-mails.");
+};
+
+const processPaidDonorEmail = async (transaction: Record<string, any>, externalId: string) => {
+  const config = await loadProviderConfig("resend");
+  if (!config?.apiKey || !config?.from) return;
+  const grossAmount = Number(transaction.grossAmount);
+  const currency = String(transaction.currency || "USD").toUpperCase();
+  if (!Number.isInteger(grossAmount) || grossAmount <= 0) return;
+  const lead = await findPaymentLead(transaction, grossAmount, currency);
+  const donorEmail = String(lead?.email || transaction.customer?.email || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(donorEmail)) return;
+  const donorName = String(lead?.donor_name || transaction.customer?.name || "Friend").trim();
+
+  const sequenceUrl = `${supabaseUrl}/rest/v1/donor_email_sequences?external_id=eq.${encodeURIComponent(externalId)}&select=*`;
+  let response = await fetch(sequenceUrl, { headers: serviceHeaders });
+  if (!response.ok) throw new Error("Não foi possível consultar a sequência de e-mails.");
+  let sequence = (await response.json())[0];
+  if (!sequence) {
+    const createdAt = new Date().toISOString();
+    const insertResponse = await fetch(`${supabaseUrl}/rest/v1/donor_email_sequences?on_conflict=external_id`, {
+      method: "POST",
+      headers: { ...serviceHeaders, Prefer: "resolution=ignore-duplicates,return=representation" },
+      body: JSON.stringify({
+        external_id: externalId,
+        donor_email: donorEmail,
+        donor_name: donorName,
+        gross_amount: grossAmount,
+        currency,
+        marketing_consent: lead?.marketing_consent === true,
+        unsubscribe_token: crypto.randomUUID(),
+        scheduled_email_ids: [],
+        created_at: createdAt
+      })
+    });
+    if (!insertResponse.ok) throw new Error("Não foi possível criar a sequência de e-mails.");
+    sequence = (await insertResponse.json())[0];
+    if (!sequence) {
+      response = await fetch(sequenceUrl, { headers: serviceHeaders });
+      sequence = (await response.json())[0];
+    }
+  }
+  if (!sequence || sequence.unsubscribed_at) return;
+
+  const greetingName = firstName(donorName);
+  if (!sequence.thank_you_email_id) {
+    const amount = formatMoney(grossAmount, currency);
+    const copy = `Thank you for your generous donation of ${amount}. Your kindness helps Jessica's family face treatment-related expenses with more support and less uncertainty. We're deeply grateful you chose to stand with her.`;
+    const thankYouId = await sendResendEmail(config, {
+      to: [donorEmail],
+      subject: "Thank you for standing with Jessica",
+      html: emailHtml(greetingName, copy, "Visit Jessica's campaign"),
+      text: emailText(greetingName, copy, "Visit Jessica's campaign"),
+      tags: [{ name: "category", value: "donation_thank_you" }]
+    }, `cloudy-thank-you-${externalId}`);
+    await patchEmailSequence(externalId, { thank_you_email_id: thankYouId });
+  }
+
+  if (grossAmount < 20000 || currency !== "USD" || sequence.marketing_consent !== true) return;
+  const existingIds = Array.isArray(sequence.scheduled_email_ids) ? sequence.scheduled_email_ids : [];
+  if (existingIds.length >= followUpTemplates.length) return;
+  const unsubscribeUrl = `${campaignUrl}api/email/unsubscribe?token=${sequence.unsubscribe_token}`;
+  const baseTime = new Date(sequence.created_at || Date.now()).getTime();
+  const scheduledIds = [...existingIds];
+  for (let index = existingIds.length; index < followUpTemplates.length; index += 1) {
+    const template = followUpTemplates[index];
+    const scheduledAt = new Date(baseTime + template.day * 24 * 60 * 60 * 1000).toISOString();
+    const emailId = await sendResendEmail(config, {
+      to: [donorEmail],
+      subject: template.subject,
+      html: emailHtml(greetingName, template.copy, "Support Jessica again", unsubscribeUrl),
+      text: emailText(greetingName, template.copy, "Support Jessica again", unsubscribeUrl),
+      scheduled_at: scheduledAt,
+      tags: [{ name: "category", value: "donor_followup" }, { name: "sequence_day", value: String(template.day) }]
+    }, `cloudy-follow-up-${externalId}-${template.day}`);
+    scheduledIds.push(emailId);
+    await patchEmailSequence(externalId, { scheduled_email_ids: scheduledIds });
+  }
 };
 
 const handleWebhook = async (request: Request) => {
@@ -253,6 +398,7 @@ const handleWebhook = async (request: Request) => {
     body: JSON.stringify({ external_id: externalId, event, status: transaction.status || null, gross_amount: Number.isFinite(Number(transaction.grossAmount)) ? Number(transaction.grossAmount) : null, currency: transaction.currency || null, payment_method: transaction.paymentMethod || null, customer_name: transaction.customer?.name || null, customer_email: transaction.customer?.email || null, payload, occurred_at: payload.timestamp || new Date().toISOString() })
   });
   if (!databaseResponse.ok) return json(request, { error: "Não foi possível registrar o evento." }, 500);
+  if (event === "transaction.paid") await processPaidDonorEmail(transaction, externalId);
   return new Response(null, { status: 204, headers: corsHeaders(request) });
 };
 

@@ -39,6 +39,7 @@ const publicFiles = [
   "admin-donations.html",
   "admin-content.html",
   "admin-gateway.html",
+  "admin-apis.html",
   "admin-login.html",
   "admin.css",
   "admin.js",
