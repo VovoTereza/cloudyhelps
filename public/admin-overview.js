@@ -10,14 +10,11 @@
     paid: "O webhook assinado confirmou o recebimento desta doação."
   };
   const refs = Object.fromEntries([
-    "data-error", "overview-sync-label", "overview-clock", "map-target-city", "map-target-ip", "map-coords", "map-empty", "metric-sessions", "metric-conversion", "metric-revenue", "lead-avatar", "lead-name", "lead-flag", "lead-device", "lead-status", "journey-progress-fill", "stage-headline", "stage-subline", "lead-source", "lead-ip", "lead-value", "lead-time", "feed-container", "feed-counter", "refresh-overview", "map-focus"
+    "data-error", "overview-sync-label", "overview-clock", "map-target-city", "map-target-ip", "map-coords", "map-empty", "journey-marker-layer", "metric-sessions", "metric-conversion", "metric-revenue", "lead-avatar", "lead-name", "lead-flag", "lead-device", "lead-status", "journey-progress-fill", "stage-headline", "stage-subline", "lead-source", "lead-ip", "lead-value", "lead-time", "feed-container", "feed-counter", "refresh-overview", "map-focus"
   ].map((id) => [id, document.getElementById(id)]));
   let events = [];
   let selectedSessionId = "";
   let activeFilter = "all";
-  let map = null;
-  let mapLoaded = false;
-  let markers = [];
   let loading = false;
 
   const money = (amount, currency = "USD") => new Intl.NumberFormat("pt-BR", { style: "currency", currency: currency || "USD", maximumFractionDigits: 2 }).format(Number(amount || 0) / 100);
@@ -136,19 +133,8 @@
     refs["feed-counter"].textContent = `${filtered.length} ${filtered.length === 1 ? "evento" : "eventos"}`;
   };
 
-  const initMap = () => {
-    if (map || typeof window.maplibregl !== "object") return;
-    try {
-      map = new window.maplibregl.Map({ container: "journey-map", style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json", center: [-80, 25], zoom: 1.7, attributionControl: true });
-      map.on("load", () => { mapLoaded = true; renderMarkers(); focusSelected(); });
-    } catch {
-      refs["map-empty"].textContent = "O mapa não pôde ser carregado. Os eventos continuam disponíveis no feed.";
-    }
-  };
   const renderMarkers = () => {
-    if (!mapLoaded) return;
-    markers.forEach((marker) => marker.remove());
-    markers = [];
+    refs["journey-marker-layer"].replaceChildren();
     latestPerSession().forEach((event) => {
       const located = eventWithLocation(event.session_id);
       if (!located) return;
@@ -156,16 +142,18 @@
       element.type = "button";
       element.className = `journey-marker journey-marker--${event.stage}${event.session_id === selectedSessionId ? " is-selected" : ""}`;
       element.setAttribute("aria-label", `${stageLabel[event.stage]} em ${located.city || "local aproximado"}`);
+      const longitude = Math.max(-180, Math.min(180, Number(located.longitude)));
+      const latitude = Math.max(-85, Math.min(85, Number(located.latitude)));
+      element.style.left = `${((longitude + 180) / 360) * 100}%`;
+      element.style.top = `${((90 - latitude) / 180) * 100}%`;
       element.addEventListener("click", () => selectSession(event.session_id));
-      const marker = new window.maplibregl.Marker({ element }).setLngLat([Number(located.longitude), Number(located.latitude)]).addTo(map);
-      markers.push(marker);
+      refs["journey-marker-layer"].append(element);
     });
   };
   const focusSelected = () => {
-    if (!mapLoaded || !selectedSessionId) return;
-    const located = eventWithLocation(selectedSessionId);
-    if (!located) return;
-    map.flyTo({ center: [Number(located.longitude), Number(located.latitude)], zoom: 6.4, speed: 1.1, essential: false });
+    if (!selectedSessionId) return;
+    const marker = refs["journey-marker-layer"].querySelector(".is-selected");
+    if (marker) marker.focus({ preventScroll: true });
   };
 
   const loadOverview = async (silent = false) => {
@@ -212,7 +200,6 @@
   const updateClock = () => { refs["overview-clock"].textContent = new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" }); };
   updateClock();
   setInterval(updateClock, 1000);
-  initMap();
   loadOverview(false);
   setInterval(() => loadOverview(true), 15000);
 })();
