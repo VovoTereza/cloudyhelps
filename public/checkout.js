@@ -32,8 +32,7 @@
   const fields = [
     { input: document.querySelector("#email"), error: document.querySelector("#email-error"), message: "Enter a valid email address." },
     { input: document.querySelector("#first-name"), error: document.querySelector("#first-name-error"), message: "Enter your first name." },
-    { input: document.querySelector("#last-name"), error: document.querySelector("#last-name-error"), message: "Enter your last name." },
-    { input: document.querySelector("#country"), error: document.querySelector("#country-error"), message: "Select your country or region." }
+    { input: document.querySelector("#last-name"), error: document.querySelector("#last-name-error"), message: "Enter your last name." }
   ];
 
   const validateField = ({ input, error, message: errorMessage }) => {
@@ -94,7 +93,7 @@
         return true;
       } catch (error) {
         submitLabel.textContent = "Continue securely";
-        if (showFeedback) showMessage(error.message || "Unable to connect to Navenaut. Please try again.");
+        if (showFeedback) showMessage(error.message || "Unable to connect to the payment service. Please try again.");
         return false;
       } finally {
         paymentElement.removeAttribute("aria-busy");
