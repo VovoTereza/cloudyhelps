@@ -19,6 +19,7 @@
       return created;
     } catch { return crypto.randomUUID(); }
   })();
+  window.CloudyJourneyPresence?.track(journeySessionId);
   const googleClientId = () => {
     const cookie = decodeURIComponent(cookieValue("_ga"));
     const parts = cookie.split(".");

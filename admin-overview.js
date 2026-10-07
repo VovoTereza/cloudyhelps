@@ -27,9 +27,10 @@ const lightMapStyle = {
     paid: "O webhook assinado confirmou o recebimento desta doação."
   };
   const refs = Object.fromEntries([
-    "data-error", "overview-sync-label", "overview-clock", "map-target-city", "map-target-ip", "map-coords", "map-empty", "metric-sessions", "metric-conversion", "metric-revenue", "lead-avatar", "lead-name", "lead-flag", "lead-device", "lead-status", "journey-progress-fill", "stage-headline", "stage-subline", "lead-source", "lead-ip", "lead-value", "lead-time", "feed-container", "feed-counter", "refresh-overview", "map-focus"
+    "data-error", "overview-sync-label", "overview-clock", "map-target-city", "map-target-ip", "map-coords", "map-empty", "map-presence-dot", "metric-sessions", "metric-conversion", "metric-revenue", "lead-avatar", "lead-name", "lead-flag", "lead-device", "lead-status", "journey-progress-fill", "stage-headline", "stage-subline", "lead-source", "lead-ip", "lead-value", "lead-time", "feed-container", "feed-counter", "refresh-overview", "map-focus"
   ].map((id) => [id, document.getElementById(id)]));
   let events = [];
+  let activeSessionIds = new Set();
   let selectedSessionId = "";
   let activeFilter = "all";
   let map = null;
@@ -49,6 +50,7 @@ const lightMapStyle = {
     return `${device} · ${browser}`;
   };
   const sessionEvents = (sessionId) => events.filter((event) => event.session_id === sessionId).sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at));
+  const sessionIsActive = (sessionId) => activeSessionIds.has(sessionId);
   const latestPerSession = () => {
     const latest = new Map();
     events.forEach((event) => { if (!latest.has(event.session_id)) latest.set(event.session_id, event); });
@@ -80,6 +82,7 @@ const lightMapStyle = {
       refs["lead-device"].textContent = "Aguardando atividade real";
       refs["lead-status"].textContent = "SEM DADOS";
       refs["lead-status"].removeAttribute("data-stage");
+      refs["map-presence-dot"].classList.add("is-inactive");
       refs["journey-progress-fill"].style.width = "0";
       refs["stage-headline"].textContent = "Aguardando atividade";
       refs["stage-subline"].textContent = "Os dados aparecerão após uma visita real à campanha.";
@@ -87,6 +90,7 @@ const lightMapStyle = {
       return;
     }
     const { highest, identity, location } = currentSession();
+    const activeNow = sessionIsActive(selectedSessionId);
     const name = identity?.donor_name || (identity?.donor_email ? identity.donor_email.replace(/(^.).*(@.*$)/, "$1•••$2") : "Visitante anônimo");
     refs["lead-avatar"].textContent = initials(name);
     refs["lead-name"].textContent = name;
@@ -103,10 +107,9 @@ const lightMapStyle = {
     refs["lead-value"].textContent = highest.amount ? money(highest.amount, highest.currency) : "Ainda não definido";
     refs["lead-time"].textContent = dateTime(highest.occurred_at);
     refs["map-target-city"].textContent = location?.city ? `${location.city}${location.country_code ? `, ${location.country_code}` : ""}` : "Localização não disponível";
-    refs["map-target-ip"].textContent = location?.ip_masked ? `IP: ${location.ip_masked}` : "IP não armazenado";
+    refs["map-target-ip"].textContent = `${location?.ip_masked ? `IP: ${location.ip_masked}` : "IP não armazenado"} · ${activeNow ? "ativo agora" : "sessão encerrada"}`;
+    refs["map-presence-dot"].classList.toggle("is-inactive", !activeNow);
     refs["map-coords"].textContent = location ? `${Number(location.latitude).toFixed(4)}, ${Number(location.longitude).toFixed(4)}` : "Sem coordenadas";
-    refs["map-empty"].textContent = mapError || "O primeiro evento com localização aparecerá aqui.";
-    refs["map-empty"].hidden = Boolean(location) && !mapError;
   };
   const selectSession = (sessionId, focusMap = true) => {
     selectedSessionId = sessionId;
@@ -156,10 +159,14 @@ const lightMapStyle = {
   };
 
   const renderMarkers = () => {
-    if (!mapLoaded) return;
     markers.forEach((marker) => marker.remove());
     markers = [];
+    if (!mapLoaded) {
+      renderMapState();
+      return;
+    }
     latestPerSession().forEach((event) => {
+      if (!sessionIsActive(event.session_id)) return;
       const located = eventWithLocation(event.session_id);
       if (!located) return;
       const element = document.createElement("button");
@@ -173,9 +180,15 @@ const lightMapStyle = {
         .addTo(map);
       markers.push(marker);
     });
+    renderMapState();
+  };
+  const renderMapState = () => {
+    const activeLocated = latestPerSession().some((event) => sessionIsActive(event.session_id) && eventWithLocation(event.session_id));
+    refs["map-empty"].textContent = mapError || "Nenhum visitante ativo no mapa agora.";
+    refs["map-empty"].hidden = activeLocated && !mapError;
   };
   const focusSelected = () => {
-    if (!mapLoaded || !selectedSessionId) return;
+    if (!mapLoaded || !selectedSessionId || !sessionIsActive(selectedSessionId)) return;
     const located = eventWithLocation(selectedSessionId);
     if (!located) return;
     map.flyTo({ center: [Number(located.longitude), Number(located.latitude)], zoom: 7, speed: 1.1, essential: false });
@@ -206,11 +219,13 @@ const lightMapStyle = {
         if (mapLoaded) return;
         mapError = "Não foi possível carregar o mapa-base. Os eventos continuam disponíveis no feed.";
         renderCurrent();
+        renderMapState();
       });
       new ResizeObserver(() => map?.resize()).observe(document.querySelector(".journey-map-shell"));
     } catch {
       mapError = "Não foi possível iniciar o mapa. Os eventos continuam disponíveis no feed.";
       renderCurrent();
+      renderMapState();
     }
   };
 
@@ -260,5 +275,11 @@ const lightMapStyle = {
   setInterval(updateClock, 1000);
   initMap();
   loadOverview(false);
-  setInterval(() => loadOverview(true), 15000);
+  const unsubscribePresence = window.CloudyJourneyPresence?.subscribe((sessionIds) => {
+    activeSessionIds = sessionIds;
+    renderCurrent();
+    renderMarkers();
+  });
+  window.addEventListener("pagehide", () => unsubscribePresence?.(), { once: true });
+  setInterval(() => loadOverview(true), 5000);
 })();

@@ -33,6 +33,7 @@
       }).then((response) => { if (response.ok) sessionStorage.setItem("cloudyJourneyViewSent", "true"); }).catch(() => {});
     }
   } catch {}
+  window.CloudyJourneyPresence?.track(journeySessionId);
   const amountButtons = Array.from(document.querySelectorAll("button[aria-pressed]"));
   if (!amountButtons.length) return;
 

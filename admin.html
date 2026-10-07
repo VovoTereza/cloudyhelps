@@ -50,7 +50,7 @@
         </div>
         <div class="journey-map-shell">
           <div id="journey-map" role="region" aria-label="Mapa interativo das jornadas reais"></div>
-          <div class="journey-map-status"><span class="journey-map-pulse" aria-hidden="true"></span><div><strong id="map-target-city">Aguardando eventos</strong><span id="map-target-ip">Localização aproximada</span></div></div>
+          <div class="journey-map-status"><span class="journey-map-pulse is-inactive" id="map-presence-dot" aria-hidden="true"></span><div><strong id="map-target-city">Aguardando eventos</strong><span id="map-target-ip">Nenhum visitante ativo</span></div></div>
           <button class="journey-map-focus" id="map-focus" type="button" aria-label="Centralizar no evento selecionado"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M22 12h-3M12 22v-3M2 12h3"/></svg></button>
           <div class="journey-map-footer"><span id="map-coords">Sem coordenadas</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>Dados protegidos</span></div>
           <div class="journey-map-empty" id="map-empty">O primeiro evento com localização aparecerá aqui.</div>
@@ -68,11 +68,13 @@
           <div class="journey-stage-note"><span class="journey-stage-icon" id="stage-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg></span><div><strong id="stage-headline">Aguardando atividade</strong><p id="stage-subline">Os dados aparecerão após uma visita real à campanha.</p></div></div>
           <dl class="journey-details"><div><dt>Origem</dt><dd id="lead-source">—</dd></div><div><dt>IP mascarado</dt><dd id="lead-ip">—</dd></div><div><dt>Valor</dt><dd id="lead-value">—</dd></div><div><dt>Horário</dt><dd id="lead-time">—</dd></div></dl>
         </article>
-        <section class="journey-feed" aria-labelledby="feed-title"><div class="journey-feed-header"><h3 id="feed-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>Eventos recentes do funil</h3><span id="feed-counter">0 eventos</span></div><div id="feed-container" class="journey-feed-list"><p class="journey-empty">Nenhum evento real registrado ainda.</p></div><div class="journey-feed-footer"><span><i aria-hidden="true"></i>Atualização automática a cada 15s</span><button id="refresh-overview" type="button">Atualizar agora</button></div></section>
+        <section class="journey-feed" aria-labelledby="feed-title"><div class="journey-feed-header"><h3 id="feed-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>Eventos recentes do funil</h3><span id="feed-counter">0 eventos</span></div><div id="feed-container" class="journey-feed-list"><p class="journey-empty">Nenhum evento real registrado ainda.</p></div><div class="journey-feed-footer"><span><i aria-hidden="true"></i>Presença sincronizada em tempo real</span><button id="refresh-overview" type="button">Atualizar agora</button></div></section>
       </div>
     </section>
   </main>
   <script src="/supabase-config.js"></script>
+  <script src="/vendor/supabase.js"></script>
+  <script src="/journey-presence.js"></script>
   <script src="/supabase-client.js"></script>
   <script src="/campaign-data.js"></script>
   <script src="/admin.js"></script>

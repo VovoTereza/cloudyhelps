@@ -22,10 +22,12 @@ const [campaignHtml, supabaseClient, campaignData, campaignRuntime, interactions
 
 const supabaseUrl = process.env.SUPABASE_URL || "https://ojwshgpvijmbcjyiggxl.supabase.co";
 const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_jESyYbVDaDejhlzkjJ4kfw_iQVvYHY7";
+const supabaseRealtimeUrl = supabaseUrl.replace(/^http/, "ws");
 const runtimeConfig = `window.CloudySupabaseConfig=Object.freeze(${JSON.stringify({ url: supabaseUrl, publishableKey: supabasePublishableKey, proxyPath: "/supabase" })});`;
-const injection = `<script>${runtimeConfig}</script><script>${supabaseClient}</script><script>${campaignData}</script><script>${campaignRuntime}</script><script>${interactions}</script>`;
+const injection = `<script>${runtimeConfig}</script><script src="/vendor/supabase.js"></script><script src="/journey-presence.js"></script><script>${supabaseClient}</script><script>${campaignData}</script><script>${campaignRuntime}</script><script>${interactions}</script>`;
 const campaignHtmlWithNetworkPolicy = campaignHtml
-  .replace("default-src 'none';", `default-src 'none'; connect-src 'self' ${supabaseUrl};`)
+  .replace("default-src 'none';", `default-src 'none'; connect-src 'self' ${supabaseUrl} ${supabaseRealtimeUrl};`)
+  .replace("script-src 'unsafe-inline' data:;", "script-src 'self' 'unsafe-inline' data:;")
   .replace("img-src 'self' data:;", `img-src 'self' data: ${supabaseUrl};`);
 const indexHtml = campaignHtmlWithNetworkPolicy.includes("</body>")
   ? campaignHtmlWithNetworkPolicy.replace("</body>", `${injection}</body>`)
@@ -56,8 +58,10 @@ const publicFiles = [
 ];
 
 await Promise.all(publicFiles.map((file) => cp(path.join(root, file), path.join(output, file))));
+await cp(path.join(root, "journey-presence-entry.js"), path.join(output, "journey-presence.js"));
 await mkdir(path.join(output, "vendor"), { recursive: true });
 await Promise.all([
+  cp(path.join(root, "node_modules", "@supabase", "supabase-js", "dist", "umd", "supabase.js"), path.join(output, "vendor", "supabase.js")),
   cp(path.join(root, "node_modules", "maplibre-gl", "dist", "maplibre-gl.mjs"), path.join(output, "vendor", "maplibre-gl.mjs")),
   cp(path.join(root, "node_modules", "maplibre-gl", "dist", "maplibre-gl-worker.mjs"), path.join(output, "vendor", "maplibre-gl-worker.mjs")),
   cp(path.join(root, "node_modules", "maplibre-gl", "dist", "maplibre-gl.css"), path.join(output, "vendor", "maplibre-gl.css"))
