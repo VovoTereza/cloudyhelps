@@ -88,6 +88,29 @@ const nautHeaders = (config: Record<string, any>) => ({
   "Content-Type": "application/json"
 });
 const normalizeName = (value: unknown) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const cleanRequestHeader = (request: Request, name: string, maximum = 180) => {
+  const raw = request.headers.get(name) || "";
+  try { return decodeURIComponent(raw).replace(/[\u0000-\u001f]/g, "").slice(0, maximum); } catch { return raw.slice(0, maximum); }
+};
+const validCoordinate = (value: string, minimum: number, maximum: number) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= minimum && parsed <= maximum ? parsed : null;
+};
+const maskIp = (value: string) => {
+  const first = String(value || "").split(",")[0].trim();
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(first)) return `${first.split(".").slice(0, 3).join(".")}.*`;
+  if (first.includes(":")) return `${first.split(":").slice(0, 3).join(":")}:*`;
+  return "";
+};
+const journeySource = (context: Record<string, any>) => context.ttclid ? "TikTok Ads" : context.gclid ? "Google Ads" : (context.fbc || context.fbp) ? "Meta Ads" : "Direto / não identificado";
+const insertJourneyEvent = async (event: Record<string, unknown>) => {
+  const response = await fetch(`${supabaseUrl}/rest/v1/lead_journey_events?on_conflict=dedupe_key`, {
+    method: "POST",
+    headers: { ...serviceHeaders, Prefer: "resolution=ignore-duplicates,return=minimal" },
+    body: JSON.stringify(event)
+  });
+  if (!response.ok) throw new Error("Não foi possível registrar a etapa da jornada.");
+};
 const loadCampaignTiers = async () => {
   const response = await fetch(`${supabaseUrl}/rest/v1/campaign_content?id=eq.main&select=data&limit=1`, { headers: serviceHeaders });
   if (!response.ok) throw new Error("Não foi possível ler os níveis de doação.");
@@ -209,10 +232,25 @@ const handleCreateIntent = async (request: Request) => {
   const medicineSupport = body.medicineSupport === true;
   const marketingConsent = body.marketingConsent === true;
   const submittedTracking = body.trackingContext && typeof body.trackingContext === "object" ? body.trackingContext : {};
-  const trackingContext = Object.fromEntries(["fbp", "fbc", "ttclid", "ttp", "gclid", "googleClientId", "userAgent", "pageUrl"].map((key) => [key, String(submittedTracking[key] || "").slice(0, key === "pageUrl" ? 1000 : 500)]));
+  const trackingContext = Object.fromEntries(["fbp", "fbc", "ttclid", "ttp", "gclid", "googleClientId", "userAgent", "pageUrl", "journeySessionId"].map((key) => [key, String(submittedTracking[key] || "").slice(0, key === "pageUrl" ? 1000 : 500)]));
   const email = String(body.email || "").trim().toLowerCase();
   const name = String(body.name || "").trim();
   const requestId = /^[0-9a-f-]{36}$/i.test(String(body.requestId || "")) ? body.requestId : crypto.randomUUID();
+  const journeySessionId = /^[0-9a-f-]{36}$/i.test(String(trackingContext.journeySessionId || "")) ? trackingContext.journeySessionId : requestId;
+  const journeyLocation = {
+    city: cleanRequestHeader(request, "x-client-city"),
+    country_code: cleanRequestHeader(request, "x-client-country", 3).toUpperCase(),
+    latitude: validCoordinate(cleanRequestHeader(request, "x-client-latitude", 30), -90, 90),
+    longitude: validCoordinate(cleanRequestHeader(request, "x-client-longitude", 30), -180, 180),
+    ip_masked: maskIp(cleanRequestHeader(request, "x-client-ip", 100))
+  };
+  Object.assign(trackingContext, {
+    city: journeyLocation.city,
+    countryCode: journeyLocation.country_code,
+    latitude: journeyLocation.latitude,
+    longitude: journeyLocation.longitude,
+    ipMasked: journeyLocation.ip_masked
+  });
   if (!Number.isInteger(amount) || amount < 100 || amount > 10000000) return json(request, { error: "Informe um valor de doação válido." }, 422);
   if (!Number.isInteger(baseAmount) || amount !== baseAmount + (medicineSupport ? 1500 : 0)) return json(request, { error: "A opção de doação selecionada é inválida." }, 422);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || name.length < 2 || name.length > 120) return json(request, { error: "Informe nome e e-mail válidos." }, 422);
@@ -246,6 +284,21 @@ const handleCreateIntent = async (request: Request) => {
     })
   });
   if (!leadResponse.ok) return json(request, { error: "Não foi possível vincular os dados do doador ao pagamento." }, 503);
+  await insertJourneyEvent({
+    dedupe_key: `checkout:${requestId}`,
+    session_id: journeySessionId,
+    stage: "checkout",
+    request_id: requestId,
+    donor_name: name,
+    donor_email: email,
+    amount,
+    currency: "USD",
+    ...journeyLocation,
+    source: journeySource(trackingContext),
+    device: trackingContext.userAgent,
+    page_url: trackingContext.pageUrl,
+    occurred_at: new Date().toISOString()
+  });
   return json(request, { clientSecret: payment.clientSecret, publishableKey: payment.publishableKey, paymentIntentId: payment.paymentIntentId || null });
 };
 
@@ -298,6 +351,34 @@ const findPaymentLead = async (transaction: Record<string, any>, grossAmount: nu
   const response = await fetch(`${supabaseUrl}/rest/v1/payment_leads?${filter}&select=email,donor_name,marketing_consent,tracking_context&order=created_at.desc&limit=1`, { headers: serviceHeaders });
   if (!response.ok) throw new Error("Não foi possível localizar os dados do doador.");
   return (await response.json())[0] || null;
+};
+
+const processPaidJourney = async (transaction: Record<string, any>, externalId: string) => {
+  const grossAmount = Number(transaction.grossAmount);
+  const currency = String(transaction.currency || "USD").toUpperCase();
+  if (!Number.isInteger(grossAmount) || grossAmount <= 0) return;
+  const lead = await findPaymentLead(transaction, grossAmount, currency);
+  const context = lead?.tracking_context || {};
+  const sessionId = /^[0-9a-f-]{36}$/i.test(String(context.journeySessionId || "")) ? context.journeySessionId : crypto.randomUUID();
+  await insertJourneyEvent({
+    dedupe_key: `paid:${externalId}`,
+    session_id: sessionId,
+    stage: "paid",
+    external_id: externalId,
+    donor_name: String(lead?.donor_name || transaction.customer?.name || "").slice(0, 120),
+    donor_email: String(lead?.email || transaction.customer?.email || "").slice(0, 320),
+    amount: grossAmount,
+    currency,
+    city: String(context.city || "").slice(0, 180),
+    country_code: String(context.countryCode || "").slice(0, 3),
+    latitude: Number.isFinite(Number(context.latitude)) ? Number(context.latitude) : null,
+    longitude: Number.isFinite(Number(context.longitude)) ? Number(context.longitude) : null,
+    ip_masked: String(context.ipMasked || "").slice(0, 100),
+    source: journeySource(context),
+    device: String(context.userAgent || "").slice(0, 500),
+    page_url: String(context.pageUrl || "").slice(0, 1000),
+    occurred_at: new Date().toISOString()
+  });
 };
 
 const patchEmailSequence = async (externalId: string, values: Record<string, unknown>) => {
@@ -518,6 +599,7 @@ const handleWebhook = async (request: Request) => {
   if (!databaseResponse.ok) return json(request, { error: "Não foi possível registrar o evento." }, 500);
   if (event === "transaction.paid") {
     const outcomes = await Promise.allSettled([
+      processPaidJourney(transaction, externalId),
       processPaidTracking(transaction, externalId),
       processPaidDonorEmail(transaction, externalId)
     ]);

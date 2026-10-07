@@ -6,6 +6,33 @@
       try { sessionStorage.setItem(`cloudy_${key}`, value); } catch {}
     }
   });
+  const journeySessionId = (() => {
+    try {
+      const existing = sessionStorage.getItem("cloudyJourneySessionId");
+      if (existing) return existing;
+      const created = crypto.randomUUID();
+      sessionStorage.setItem("cloudyJourneySessionId", created);
+      return created;
+    } catch { return crypto.randomUUID(); }
+  })();
+  try {
+    if (!sessionStorage.getItem("cloudyJourneyViewSent")) {
+      fetch("/api/journey/view", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          sessionId: journeySessionId,
+          fbclid: attribution.get("fbclid") || sessionStorage.getItem("cloudy_fbclid") || "",
+          ttclid: attribution.get("ttclid") || sessionStorage.getItem("cloudy_ttclid") || "",
+          gclid: attribution.get("gclid") || sessionStorage.getItem("cloudy_gclid") || "",
+          utmSource: attribution.get("utm_source") || "",
+          userAgent: navigator.userAgent,
+          pageUrl: window.location.href
+        })
+      }).then((response) => { if (response.ok) sessionStorage.setItem("cloudyJourneyViewSent", "true"); }).catch(() => {});
+    }
+  } catch {}
   const amountButtons = Array.from(document.querySelectorAll("button[aria-pressed]"));
   if (!amountButtons.length) return;
 

@@ -11,6 +11,13 @@ export const proxyNavenaut = async (request, response, route, options = {}) => {
   if (request.headers.authorization) headers.Authorization = String(request.headers.authorization);
   if (request.headers["x-webhook-signature"]) headers["X-Webhook-Signature"] = String(request.headers["x-webhook-signature"]);
   if (request.headers["x-webhook-event"]) headers["X-Webhook-Event"] = String(request.headers["x-webhook-event"]);
+  if (route === "create-intent") {
+    headers["X-Client-City"] = String(request.headers["x-vercel-ip-city"] || "");
+    headers["X-Client-Country"] = String(request.headers["x-vercel-ip-country"] || "");
+    headers["X-Client-Latitude"] = String(request.headers["x-vercel-ip-latitude"] || "");
+    headers["X-Client-Longitude"] = String(request.headers["x-vercel-ip-longitude"] || "");
+    headers["X-Client-IP"] = String(request.headers["x-forwarded-for"] || request.headers["x-real-ip"] || "");
+  }
 
   let body;
   if (!["GET", "HEAD"].includes(request.method)) {

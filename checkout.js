@@ -10,6 +10,15 @@
   const storedAttribution = (key) => {
     try { return sessionStorage.getItem(`cloudy_${key}`) || ""; } catch { return ""; }
   };
+  const journeySessionId = (() => {
+    try {
+      const existing = sessionStorage.getItem("cloudyJourneySessionId");
+      if (existing) return existing;
+      const created = crypto.randomUUID();
+      sessionStorage.setItem("cloudyJourneySessionId", created);
+      return created;
+    } catch { return crypto.randomUUID(); }
+  })();
   const googleClientId = () => {
     const cookie = decodeURIComponent(cookieValue("_ga"));
     const parts = cookie.split(".");
@@ -32,7 +41,8 @@
       gclid: storedAttribution("gclid").slice(0, 500),
       googleClientId: googleClientId().slice(0, 120),
       userAgent: navigator.userAgent.slice(0, 500),
-      pageUrl: window.location.href.slice(0, 1000)
+      pageUrl: window.location.href.slice(0, 1000),
+      journeySessionId
     };
   };
   const validAmount = (value) => Number.isFinite(value) && value > 0 && value <= 100000;
