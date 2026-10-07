@@ -56,6 +56,12 @@ const publicFiles = [
 ];
 
 await Promise.all(publicFiles.map((file) => cp(path.join(root, file), path.join(output, file))));
+await mkdir(path.join(output, "vendor"), { recursive: true });
+await Promise.all([
+  cp(path.join(root, "node_modules", "maplibre-gl", "dist", "maplibre-gl.mjs"), path.join(output, "vendor", "maplibre-gl.mjs")),
+  cp(path.join(root, "node_modules", "maplibre-gl", "dist", "maplibre-gl-worker.mjs"), path.join(output, "vendor", "maplibre-gl-worker.mjs")),
+  cp(path.join(root, "node_modules", "maplibre-gl", "dist", "maplibre-gl.css"), path.join(output, "vendor", "maplibre-gl.css"))
+]);
 await writeFile(path.join(output, "supabase-config.js"), runtimeConfig, "utf8");
 await cp(path.join(root, "assets"), path.join(output, "assets"), { recursive: true });
 await writeFile(path.join(output, "robots.txt"), "User-agent: *\nDisallow: /admin\nDisallow: /admin-login\n", "utf8");

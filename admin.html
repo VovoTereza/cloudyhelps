@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/admin.css">
+  <link rel="stylesheet" href="/vendor/maplibre-gl.css">
   <link rel="stylesheet" href="/admin-overview.css">
 </head>
 <body class="admin-page auth-pending" data-admin-page="overview">
@@ -48,22 +49,7 @@
           <button class="journey-filter" type="button" data-stage="paid" aria-pressed="false"><span class="journey-filter-dot journey-filter-dot--paid"></span>Pagamento</button>
         </div>
         <div class="journey-map-shell">
-          <div id="journey-map" role="group" aria-label="Mapa mundial aproximado das jornadas">
-            <svg class="journey-map-art" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-              <defs><pattern id="journey-grid" width="62.5" height="50" patternUnits="userSpaceOnUse"><path d="M62.5 0H0V50" fill="none" stroke="#b8d8df" stroke-width="1"/></pattern></defs>
-              <rect width="1000" height="500" fill="url(#journey-grid)" class="journey-map-grid"/>
-              <path class="journey-map-route" d="M75 300C280 128 690 116 920 300M125 370C350 230 650 218 875 350"/>
-              <g class="journey-map-land">
-                <path d="M73 92 130 55 210 48 278 80 302 120 270 147 232 139 205 171 170 168 148 206 109 186 96 150 62 129Z"/>
-                <path d="M233 188 278 211 297 260 281 314 252 348 236 405 210 439 195 385 170 345 158 291 180 242Z"/>
-                <path d="M432 99 482 70 550 76 589 99 628 92 680 116 733 111 792 132 846 123 914 153 905 188 848 200 809 184 775 213 733 202 704 229 660 211 625 190 598 201 564 174 526 183 502 157 468 167 438 146 405 147 389 122Z"/>
-                <path d="M480 183 540 189 575 230 570 286 548 328 518 382 488 352 463 306 449 252Z"/>
-                <path d="M792 327 838 303 886 320 918 356 895 390 848 393 812 371Z"/>
-                <path class="journey-map-land--soft" d="M315 58 345 43 371 55 361 79 329 82ZM908 426l38-8 20 16-41 15ZM570 420l33-11 27 18-45 13Z"/>
-              </g>
-            </svg>
-            <div class="journey-marker-layer" id="journey-marker-layer"></div>
-          </div>
+          <div id="journey-map" role="region" aria-label="Mapa interativo das jornadas reais"></div>
           <div class="journey-map-status"><span class="journey-map-pulse" aria-hidden="true"></span><div><strong id="map-target-city">Aguardando eventos</strong><span id="map-target-ip">Localização aproximada</span></div></div>
           <button class="journey-map-focus" id="map-focus" type="button" aria-label="Centralizar no evento selecionado"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M22 12h-3M12 22v-3M2 12h3"/></svg></button>
           <div class="journey-map-footer"><span id="map-coords">Sem coordenadas</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>Dados protegidos</span></div>
@@ -90,6 +76,6 @@
   <script src="/supabase-client.js"></script>
   <script src="/campaign-data.js"></script>
   <script src="/admin.js"></script>
-  <script src="/admin-overview.js"></script>
+  <script type="module" src="/admin-overview.js"></script>
 </body>
 </html>

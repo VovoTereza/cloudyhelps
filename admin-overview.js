@@ -1,3 +1,20 @@
+import * as MapLibreGL from "/vendor/maplibre-gl.mjs";
+
+MapLibreGL.setWorkerUrl("/vendor/maplibre-gl-worker.mjs");
+
+const lightMapStyle = {
+  version: 8,
+  sources: {
+    openstreetmap: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors"
+    }
+  },
+  layers: [{ id: "openstreetmap", type: "raster", source: "openstreetmap", minzoom: 0, maxzoom: 19 }]
+};
+
 (() => {
   if (document.body.dataset.adminPage !== "overview") return;
   const stageRank = { offer: 1, checkout: 2, paid: 3 };
@@ -10,11 +27,15 @@
     paid: "O webhook assinado confirmou o recebimento desta doação."
   };
   const refs = Object.fromEntries([
-    "data-error", "overview-sync-label", "overview-clock", "map-target-city", "map-target-ip", "map-coords", "map-empty", "journey-marker-layer", "metric-sessions", "metric-conversion", "metric-revenue", "lead-avatar", "lead-name", "lead-flag", "lead-device", "lead-status", "journey-progress-fill", "stage-headline", "stage-subline", "lead-source", "lead-ip", "lead-value", "lead-time", "feed-container", "feed-counter", "refresh-overview", "map-focus"
+    "data-error", "overview-sync-label", "overview-clock", "map-target-city", "map-target-ip", "map-coords", "map-empty", "metric-sessions", "metric-conversion", "metric-revenue", "lead-avatar", "lead-name", "lead-flag", "lead-device", "lead-status", "journey-progress-fill", "stage-headline", "stage-subline", "lead-source", "lead-ip", "lead-value", "lead-time", "feed-container", "feed-counter", "refresh-overview", "map-focus"
   ].map((id) => [id, document.getElementById(id)]));
   let events = [];
   let selectedSessionId = "";
   let activeFilter = "all";
+  let map = null;
+  let mapLoaded = false;
+  let mapError = "";
+  let markers = [];
   let loading = false;
 
   const money = (amount, currency = "USD") => new Intl.NumberFormat("pt-BR", { style: "currency", currency: currency || "USD", maximumFractionDigits: 2 }).format(Number(amount || 0) / 100);
@@ -84,7 +105,8 @@
     refs["map-target-city"].textContent = location?.city ? `${location.city}${location.country_code ? `, ${location.country_code}` : ""}` : "Localização não disponível";
     refs["map-target-ip"].textContent = location?.ip_masked ? `IP: ${location.ip_masked}` : "IP não armazenado";
     refs["map-coords"].textContent = location ? `${Number(location.latitude).toFixed(4)}, ${Number(location.longitude).toFixed(4)}` : "Sem coordenadas";
-    refs["map-empty"].hidden = Boolean(location);
+    refs["map-empty"].textContent = mapError || "O primeiro evento com localização aparecerá aqui.";
+    refs["map-empty"].hidden = Boolean(location) && !mapError;
   };
   const selectSession = (sessionId, focusMap = true) => {
     selectedSessionId = sessionId;
@@ -134,7 +156,9 @@
   };
 
   const renderMarkers = () => {
-    refs["journey-marker-layer"].replaceChildren();
+    if (!mapLoaded) return;
+    markers.forEach((marker) => marker.remove());
+    markers = [];
     latestPerSession().forEach((event) => {
       const located = eventWithLocation(event.session_id);
       if (!located) return;
@@ -142,18 +166,52 @@
       element.type = "button";
       element.className = `journey-marker journey-marker--${event.stage}${event.session_id === selectedSessionId ? " is-selected" : ""}`;
       element.setAttribute("aria-label", `${stageLabel[event.stage]} em ${located.city || "local aproximado"}`);
-      const longitude = Math.max(-180, Math.min(180, Number(located.longitude)));
-      const latitude = Math.max(-85, Math.min(85, Number(located.latitude)));
-      element.style.left = `${((longitude + 180) / 360) * 100}%`;
-      element.style.top = `${((90 - latitude) / 180) * 100}%`;
+      element.title = `${stageLabel[event.stage]} · ${located.city || "Local aproximado"}`;
       element.addEventListener("click", () => selectSession(event.session_id));
-      refs["journey-marker-layer"].append(element);
+      const marker = new MapLibreGL.Marker({ element, anchor: "center" })
+        .setLngLat([Number(located.longitude), Number(located.latitude)])
+        .addTo(map);
+      markers.push(marker);
     });
   };
   const focusSelected = () => {
-    if (!selectedSessionId) return;
-    const marker = refs["journey-marker-layer"].querySelector(".is-selected");
-    if (marker) marker.focus({ preventScroll: true });
+    if (!mapLoaded || !selectedSessionId) return;
+    const located = eventWithLocation(selectedSessionId);
+    if (!located) return;
+    map.flyTo({ center: [Number(located.longitude), Number(located.latitude)], zoom: 7, speed: 1.1, essential: false });
+  };
+
+  const initMap = () => {
+    if (map) return;
+    try {
+      map = new MapLibreGL.Map({
+        container: "journey-map",
+        style: lightMapStyle,
+        center: [-54, -15],
+        zoom: 2.6,
+        minZoom: 1.5,
+        attributionControl: false,
+        cooperativeGestures: true
+      });
+      map.addControl(new MapLibreGL.NavigationControl({ showCompass: false }), "bottom-right");
+      map.addControl(new MapLibreGL.AttributionControl({ compact: true }), "bottom-left");
+      map.on("load", () => {
+        mapLoaded = true;
+        mapError = "";
+        renderCurrent();
+        renderMarkers();
+        focusSelected();
+      });
+      map.on("error", () => {
+        if (mapLoaded) return;
+        mapError = "Não foi possível carregar o mapa-base. Os eventos continuam disponíveis no feed.";
+        renderCurrent();
+      });
+      new ResizeObserver(() => map?.resize()).observe(document.querySelector(".journey-map-shell"));
+    } catch {
+      mapError = "Não foi possível iniciar o mapa. Os eventos continuam disponíveis no feed.";
+      renderCurrent();
+    }
   };
 
   const loadOverview = async (silent = false) => {
@@ -200,6 +258,7 @@
   const updateClock = () => { refs["overview-clock"].textContent = new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" }); };
   updateClock();
   setInterval(updateClock, 1000);
+  initMap();
   loadOverview(false);
   setInterval(() => loadOverview(true), 15000);
 })();
